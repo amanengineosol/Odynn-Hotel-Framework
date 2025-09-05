@@ -1,0 +1,58 @@
+[2025-09-04 17:27:59,408] INFO flower.command 18092 2200 Visit me at http://0.0.0.0:5555
+[2025-09-04 17:27:59,414] INFO flower.command 18092 2200 Broker: amqp://guest:**@localhost:5672//
+[2025-09-04 17:27:59,421] INFO flower.command 18092 2200 Registered tasks: 
+['apiservice.task.process_live_request',
+ 'celery.accumulate',
+ 'celery.backend_cleanup',
+ 'celery.chain',
+ 'celery.chord',
+ 'celery.chord_unlock',
+ 'celery.chunks',
+ 'celery.group',
+ 'celery.map',
+ 'celery.starmap']
+[2025-09-04 17:27:59,439] INFO kombu.mixins 18092 1908 Connected to amqp://guest:**@127.0.0.1:5672//
+[2025-09-04 17:34:40,877] ERROR flower.utils.broker 18092 2200 RabbitMQ management API call failed: Stream closed
+[2025-09-04 19:21:05,208] INFO apiservice.authentication 10484 11096 Authenticating request using ClientAuthentication
+[2025-09-04 19:21:05,274] INFO apiservice.views.hotel 10484 11096 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-04 19:21:07,406] INFO apiservice.authentication 10484 11096 Authenticating request using ClientAuthentication
+[2025-09-04 19:21:07,430] INFO apiservice.views.hotel 10484 11096 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174011
+[2025-09-04 19:25:53,905] INFO apiservice.authentication 8396 22120 Authenticating request using ClientAuthentication
+[2025-09-04 19:25:53,976] INFO apiservice.views.hotel 8396 22120 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-04 19:25:53,986] INFO apiservice.views.hotel 8396 22120 No cached response found for this parameter data. Sending to queue.
+[2025-09-04 19:25:54,153] INFO apiservice.views.hotel 8396 22120 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-04 19:25:56,993] INFO apiservice.authentication 8396 11452 Authenticating request using ClientAuthentication
+[2025-09-04 19:25:57,019] INFO apiservice.views.hotel 8396 11452 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174011
+[2025-09-04 19:25:57,022] INFO apiservice.views.hotel 8396 11452 No cached response found for this parameter data. Sending to queue.
+[2025-09-04 19:25:57,047] INFO apiservice.views.hotel 8396 11452 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174011
+[2025-09-04 19:26:21,668] ERROR flower.utils.broker 18092 2200 RabbitMQ management API call failed: Stream closed
+[2025-09-05 10:20:06,124] INFO apiservice.authentication 2112 9288 Authenticating request using ClientAuthentication
+[2025-09-05 10:20:06,148] INFO apiservice.views.hotel 2112 9288 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:20:06,154] INFO apiservice.views.hotel 2112 9288 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 10:20:06,246] INFO apiservice.views.hotel 2112 9288 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:21:57,248] INFO apiservice.authentication 2112 25748 Authenticating request using ClientAuthentication
+[2025-09-05 10:21:57,267] INFO apiservice.views.hotel 2112 25748 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:21:57,268] INFO apiservice.views.hotel 2112 25748 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 10:21:57,278] INFO apiservice.views.hotel 2112 25748 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:26:43,233] INFO apiservice.authentication 25472 5776 Authenticating request using ClientAuthentication
+[2025-09-05 10:28:06,463] INFO apiservice.authentication 20924 13768 Authenticating request using ClientAuthentication
+[2025-09-05 10:30:46,937] INFO apiservice.authentication 7988 10580 Authenticating request using ClientAuthentication
+[2025-09-05 10:30:46,947] INFO apiservice.views.hotel 7988 10580 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:30:46,951] INFO apiservice.views.hotel 7988 10580 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 10:39:17,475] INFO apiservice.authentication 25060 6244 Authenticating request using ClientAuthentication
+[2025-09-05 10:39:17,507] INFO apiservice.views.hotel 25060 6244 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:46:12,180] INFO apiservice.authentication 7268 20644 Authenticating request using ClientAuthentication
+[2025-09-05 10:46:12,211] INFO apiservice.views.hotel 7268 20644 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 10:46:12,215] INFO apiservice.views.hotel 7268 20644 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 10:46:12,279] INFO apiservice.views.hotel 7268 20644 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 11:01:27,092] INFO apiservice.authentication 20516 22280 Authenticating request using ClientAuthentication
+[2025-09-05 11:01:27,124] INFO apiservice.views.hotel 20516 22280 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 11:01:27,129] INFO apiservice.views.hotel 20516 22280 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 11:01:27,194] INFO apiservice.views.hotel 20516 22280 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 11:01:53,611] INFO apiservice.authentication 20516 22280 Authenticating request using ClientAuthentication
+[2025-09-05 11:01:53,617] INFO apiservice.views.hotel 20516 22280 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 11:01:53,618] INFO apiservice.views.hotel 20516 22280 Cached response found for this parameter data. Returning cached response.
+[2025-09-05 11:02:04,188] INFO apiservice.authentication 20516 22280 Authenticating request using ClientAuthentication
+[2025-09-05 11:02:04,199] INFO apiservice.views.hotel 20516 22280 Request saved in db with ID: 123e4567-e89b-12d3-a456-426614174014
+[2025-09-05 11:02:04,200] INFO apiservice.views.hotel 20516 22280 No cached response found for this parameter data. Sending to queue.
+[2025-09-05 11:02:04,202] INFO apiservice.views.hotel 20516 22280 Request sent to queue for processing: 123e4567-e89b-12d3-a456-426614174014

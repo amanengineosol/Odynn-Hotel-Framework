@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Update Job</title>
+    <style>
+        /* Base form container */
+        form {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px 25px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            font-family: Arial, sans-serif;
+        }
+
+        /* Labels */
+        form label {
+            display: block;
+            font-weight: bold;
+            margin: 15px 0 5px;
+            color: #333;
+        }
+
+        /* Input fields, select boxes, etc. */
+        form input[type="text"],
+        form input[type="email"],
+        form input[type="url"],
+        form input[type="number"],
+        form select,
+        form textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 3px;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease;
+        }
+
+        /* Highlight on focus */
+        form input:focus,
+        form select:focus,
+        form textarea:focus {
+            outline: none;
+            border-color: #4b7bec;
+            box-shadow: 0 0 5px rgba(75,123,236,0.2);
+        }
+
+        /* Status field styling (radio/check/select alignment) */
+        form input[type="radio"],
+        form input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        /* Submit button */
+        form button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #4b7bec;
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.25s ease;
+        }
+
+        form button:hover {
+            background-color: #3867d6;
+        }
+    </style>
+</head>
+<body>
+    <h1>Update Job</h1>
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <br>
+    <a href="{% url 'jobhub:ListAllJobs' %}">← Back to My Jobs</a>
+</body>
+</html>

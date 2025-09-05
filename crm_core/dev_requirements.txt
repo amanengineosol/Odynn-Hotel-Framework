@@ -1,0 +1,8 @@
+Django
+djangorestframework
+python-dotenv
+amqp
+redis
+celery
+flower
+pymongo dnspython

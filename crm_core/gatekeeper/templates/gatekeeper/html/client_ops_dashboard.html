@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Client Ops Dashboard</title>
+</head>
+<body>
+    <h1>Hii {{ username }}</h1>
+    <p> You are an Operation Team member. You will soon get an monitoring dashboard </p>
+        <form action="{% url 'gatekeeper:ResetPassword' %}" method="get">
+                <button type="submit">Reset Password</button>
+        </form>
+   
+</body>
+</html>

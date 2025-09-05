@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Client Admin Dashboard</title>
+    <style>
+        /* General styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 2.4rem;
+            color: #2c3e50;
+            margin-bottom: 40px;
+        }
+
+        form {
+            margin: 10px 0;
+            width: 220px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 0;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background-color: #3498db;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        /* Responsive for small screens */
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            form {
+                width: 100%;
+            }
+            button {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Hi {{ username }}</h1>
+    
+        <form action="{% url 'jobhub:job' %}" method="get">
+            <button type="submit">Create Job</button>
+        </form>
+
+        <form action="{% url 'gatekeeper:OpsUser' %}" method="get">
+            <button type="submit">Create Ops User</button>
+        </form>
+
+        <form action="{% url 'gatekeeper:ChangePassword' %}" method="get">
+            <button type="submit">Change Password</button>
+        </form>
+
+        <form action="{% url 'gatekeeper:ResetPassword' %}" method="get">
+            <button type="submit">Reset Password</button>
+        </form>
+
+        <form action="{% url 'jobhub:ListAllJobs' %}" method="get">
+            <button type="submit">Get All Jobs</button>
+        </form>
+
+        <form action="{%url 'gatekeeper:ListAllOpsUser' %}" method="get">
+            <button type="submit">Get All Ops Users</button>
+        </form>
+
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit">Log Out</button>
+        </form>
+   
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Jobs</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        button {
+            width: 8%;
+            padding: 8px 0;
+            font-size: 1.1rem;
+            font-weight: bold;
+            background-color: #3498db;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jobs Created by {{ request.user.email_id }}</h1>
+
+    {% if jobs %}
+    <form method="post" action="{% url 'jobhub:DeleteJobs' %}">
+        {% csrf_token %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Title</th>
+                    <th>Site</th>
+                    <th>Job Schedule Type</th>
+                    <th>Status</th>
+                    <th>Created At</th>
+                    <th>Edit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                    <tr>
+                        <td><input type="checkbox" name="job_ids" value="{{ job.id}}"></td>
+                        <td>{{ job.title }}</td>
+                        <td>{{ job.crawler.crawler_name }}</td>
+                        <td>{{ job.job_schedule_type.name }}</td>
+                        <td>{{ job.status }}</td>
+                        <td>{{ job.created_at|date:"Y-m-d H:i" }}</td>
+                        <td><a href="{% url 'jobhub:UpdateJob' job.pk %}">Edit</a></td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <button type="submit"> Delete </button>
+    </form>
+        
+    {% else %}
+        <p>No jobs found.</p>
+    {% endif %}
+
+    <br>
+    <a href="{% url 'gatekeeper:AdminDashboard' %}">← Back to Dashboard</a>
+</body>
+</html>

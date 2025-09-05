@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Create Job</title>
+    <style>
+        /* Base form container */
+        form {
+            max-width: 500px;
+            margin: 40px auto;
+            padding: 20px 25px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            font-family: Arial, sans-serif;
+        }
+
+        /* Labels */
+        form label {
+            display: block;
+            font-weight: bold;
+            margin: 15px 0 5px;
+            color: #333;
+        }
+
+        /* Input fields, select boxes, etc. */
+        form input[type="text"],
+        form input[type="email"],
+        form input[type="url"],
+        form input[type="number"],
+        form select,
+        form textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 3px;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease;
+        }
+
+        /* Highlight on focus */
+        form input:focus,
+        form select:focus,
+        form textarea:focus {
+            outline: none;
+            border-color: #4b7bec;
+            box-shadow: 0 0 5px rgba(75,123,236,0.2);
+        }
+
+        /* Status field styling (radio/check/select alignment) */
+        form input[type="radio"],
+        form input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        /* Submit button */
+        form button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #4b7bec;
+            color: #fff;
+            font-size: 15px;
+            font-weight: bold;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.25s ease;
+        }
+
+        form button:hover {
+            background-color: #3867d6;
+        }
+        .success-message {
+            color: green;
+            font-weight: bold;
+            text-align: center;
+        }
+        .success-message a {
+            display: inline-block;
+            margin-top: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <form method="POST" id="job-form">
+        {% csrf_token %}
+        
+        <label for="id_title">Title:</label>
+        {{ form.title }}
+
+        <label for="id_client">Client Email:</label>
+        {{ form.client }}
+
+        <label for="id_job_type">Job Type:</label>
+        {{ form.job_type }}
+        
+        <label for="id_domain">Domain</label>
+        {{ form.domain }}
+
+        <label for="id_crawler">Crawler</label>
+        {{ form.crawler }}
+
+        <div id="api-info" style="margin-top:20px; display:none;">
+            <strong>API Endpoint:</strong> <span id="api-endpoint"></span>
+            <pre id="api-body" style="background:#f8f8f8; padding:10px; border-radius:5px;"></pre>
+        </div>
+
+        <div id="schedule-fields" style="display:inline;">
+           
+            <label for="{{ id.job_schedule_type}}">Schedule Type:</label>
+            {{ form.job_schedule_type }}
+            <label for="{{ id.frequency }}">Frequency:</label>
+            {{ form.frequency }}
+            <div id="weekly-schedule-container" style="display:none;">
+                <label for="{{ id.weekly_schedule }}">Weekly Schedule:</label>
+                {{ form.weekly_schedule }}
+            </div>
+
+            <div id="bi-weekly-schedule-container" style="display:none;">
+                <label for="{{ id.bi_weekly_schedule }}">Bi-Weekly Schedule:</label>
+                {{ form.bi_weekly_schedule }}
+            </div>
+            <div id="one-time-schedule-container" style="display:none;">
+                <label for="id_schedule_date_time">Schedule Date Time</label>
+                {{ form.schedule_date_time }}
+            </div>
+            <div id="other-schedule-type-container" style="display:none;">
+                <label for="id_schedule_time">Schedule Time</label>
+                {{ form.schedule_time }}
+            </div>    
+            {{ form.status }}
+          
+            <br>
+            <button type="submit">Create Job</button>
+        </div>
+    </form>
+
+    <script>
+        const jobTypeField = document.getElementById('id_job_type');
+        const apiInfo = document.getElementById('api-info');
+        const apiEndpoint = document.getElementById('api-endpoint');
+        const apiBody = document.getElementById('api-body');
+        const domainField = document.getElementById('id_domain');
+        const crawlerField = document.getElementById('id_crawler');
+        const scheduleFields = document.getElementById('schedule-fields');
+        const jobScheduleTypeField = document.getElementById('id_job_schedule_type');
+        const weeklyScheduleContainer = document.getElementById('weekly-schedule-container');
+        const biWeeklyScheduleContainer = document.getElementById('bi-weekly-schedule-container');
+        const oneTimeScheduleContainer = document.getElementById('one-time-schedule-container');
+        const otherScheduleTypeContainer = document.getElementById('other-schedule-type-container');
+        const companyUUID = "{{ company_uuid }}";
+        const companyId = "{{ company_id }}";
+
+        function updateVisibility() {
+            console.log('Job Type Value:', jobTypeField.value);
+            if (jobTypeField.value === 'Scheduled') {
+                apiInfo.style.display = 'none';
+                scheduleFields.style.display = '';
+                document.querySelectorAll('#schedule-fields button').forEach(btn => btn.style.display = 'inline-block');
+            } else if (jobTypeField.value === 'Live') {
+                scheduleFields.style.display = 'none';
+                // Hide submit button for live
+                document.querySelectorAll('#schedule-fields button').forEach(btn => btn.style.display = 'none');
+                updateApiInfo();
+            } else {
+                apiInfo.style.display = 'none';
+                scheduleFields.style.display = 'none';
+            }
+        }    
+
+        function updateApiInfo() {
+            console.log('updateApiInfo called', jobTypeField.value, domainField.value, crawlerField.value);
+            if (jobTypeField.value !== 'Live') {
+                apiInfo.style.display = 'none';
+                apiSubmit.style.display = '';
+                return;
+            }
+            const domainId = domainField.value;
+            const crawlerId = crawlerField.value;
+            if (!domainId || !crawlerId) {
+                apiInfo.style.display = 'none';
+                return;
+            }
+            fetch(`/jobhub/ajax/get-api-template/?domain_id=${domainId}&crawler_id=${crawlerId}&company_uuid=${companyUUID}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('API Template response:', data);
+                    apiEndpoint.textContent = data.api_endpoint;
+                    apiBody.textContent = JSON.stringify(data.body, null, 4);
+                    apiInfo.style.display = '';
+                    
+                });
+        }
+
+        // Utility: detect Weekly/Bi-Weekly display value (case-insensitive)
+        function getScheduleTypeText() {
+            const selectedOption = jobScheduleTypeField.options[jobScheduleTypeField.selectedIndex];
+            return selectedOption ? selectedOption.text.trim().toLowerCase() : '';
+        }
+
+
+        function updateScheduleSubfieldsVisibility() {
+            const val = getScheduleTypeText();
+            if (val === 'weekly') {
+                weeklyScheduleContainer.style.display = "";
+                biWeeklyScheduleContainer.style.display = "none";
+            } else if (val === 'bi-weekly' || val === 'bi weekly') {
+                weeklyScheduleContainer.style.display = "none";
+                biWeeklyScheduleContainer.style.display = "";
+            } else {
+                weeklyScheduleContainer.style.display = "none";
+                biWeeklyScheduleContainer.style.display = "none";
+            }
+        }
+
+        function updateScheduleTimeFieldVisibility() {
+            const val = getScheduleTypeText();
+            if (val === 'one-time' || val === 'one time') {
+                oneTimeScheduleContainer.style.display = "";
+                otherScheduleTypeContainer.style.display = "none";
+            } else if (val === 'everyday' || val === 'weekly' || val === 'bi-weekly' || val === 'bi weekly') {
+                oneTimeScheduleContainer.style.display = "none";
+                otherScheduleTypeContainer.style.display = "";
+            } 
+            else {
+                oneTimeScheduleContainer.style.display = "none";
+                otherScheduleTypeContainer.style.display = "none";
+            }
+        }
+
+        // Crawler filter logic: update crawlers when domain changes
+    domainField.addEventListener('change', function() {
+        const domainId = domainField.value;
+        if (!domainId) return;
+        fetch(`/jobhub/ajax/get-crawlers-for-domain/?domain_id=${domainId}&company_id=${companyId}`)
+            .then(res => res.json())
+            .then(data => {
+                crawlerField.options.length = 0;
+                data.crawlers.forEach(crawler => {
+                    let opt = document.createElement('option');
+                    opt.value = crawler.id;
+                    opt.text = crawler.name;
+                    crawlerField.add(opt);
+                });
+                // Optionally, trigger other logic if required
+                updateApiInfo();  // If job_type is "Live", re-run API info logic
+            });
+    });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateVisibility();  // Initialize state on page load
+            jobTypeField.addEventListener('change', updateVisibility);
+            domainField.addEventListener('change', function() {
+                updateVisibility();
+                updateApiInfo();
+            });
+            crawlerField.addEventListener('change', function() {
+                updateVisibility();
+                updateApiInfo();
+            });
+            jobScheduleTypeField.addEventListener('change', function() {
+                updateScheduleSubfieldsVisibility(), 
+                updateScheduleTimeFieldVisibility();
+            });
+        });
+            
+    </script>
+    {% if error %}
+        <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    {% if success %}
+    <div class="success-message">
+        <p style="color:green;">{{ success }}</p>
+        <p><a href="{% url 'gatekeeper:AdminDashboard' %}">← Back to Dashboard</a></p>
+    {% endif %}
+    </div>
+    </body>
+    </body>
+</body>
+</html>
