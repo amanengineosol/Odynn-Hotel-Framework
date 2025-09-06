@@ -87,16 +87,16 @@ def get_api_template(request):
         try:
             domain = Domain.objects.get(id=domain_id)
             domain_name = domain.domain_name.lower()
-            api_endpoint = f"sendRequest/{domain_name} - POST"
+            api_endpoint = f"/api/sendRequest/{domain_name} - POST"
             parameter_template = DOMAIN_PARAMETER_MAP.get(domain_name, {})
             body = {
-                "request_id": "uuid",
-                "report_id": "uuid",
-                "client_id": company_uuid,
+                "*request_id": "uuid",
+                "*report_id": "uuid",
+                "*client_id": company_uuid,
                 "site_id": crawler_id,
-                "site_name": site_name,
-                "retry_count": 2,
-                "parameter": parameter_template
+                "*site_name": site_name,
+                "*retry_count": 2,
+                "*parameter": parameter_template
             }
         except Domain.DoesNotExist:
             pass

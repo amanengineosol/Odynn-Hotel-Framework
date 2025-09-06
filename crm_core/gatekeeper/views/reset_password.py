@@ -10,7 +10,7 @@ import random
 class ResetPasswordView(View):
     template_name = 'gatekeeper/html/reset_password.html'
 
-    def generate_otp():
+    def generate_otp(self):
        return str(random.randint(100000, 999999))
    
     def get(self, request):

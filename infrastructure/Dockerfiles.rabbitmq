@@ -1,0 +1,7 @@
+FROM rabbitmq:3.11-management
+
+# Expose default RabbitMQ ports
+EXPOSE 5672 15672
+
+# COPY rabbitmq.conf /etc/rabbitmq/rabbitmq.conf
+

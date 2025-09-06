@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.result import AsyncResult
 from kombu import Exchange, Queue
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm_core.settings')
@@ -8,12 +9,20 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 
+def check_celery_workers():
+    insp = app.control.inspect()
+    response = insp.ping()
+    return response if response else None
+
 def setup_dynamic_queues(sender, **kwargs):
     from domain.models import Domain
     from crawler.models import Crawler
 
     queues = []
     domain_exchanges = {}
+
+    if check_celery_workers:
+        raise("Celery broker/Message queue is Down. Try again later.")
 
     for domain in Domain.objects.all():
         exchange = Exchange(domain.domain_name, type='direct')

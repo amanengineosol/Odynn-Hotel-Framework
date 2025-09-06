@@ -17,6 +17,8 @@ def process_live_request(request_data):
     check_out_date = parameter.get("check_out_date")
     guest_count = parameter.get("guest_count", 1)
     fetch_response_func = CRAWLER_FETCH_RESPONSE_MAP.get(crawler_name)
+    key = redis_client.build_key(crawler_name, parameter, domain_name)
+
     if not fetch_response_func:
         response = {
             "status": "error",
@@ -25,12 +27,11 @@ def process_live_request(request_data):
     else:
         try:
             response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
+            if response['status_code'] == 200:
+                redis_client.set_crawler_response(key, response, expiration=10800)
+                return response
+            redis_client.set_crawler_response(key, response, expiration=4)
+            return response
+
         except Exception as e:
-            print(e)
-            response = "No Response from crawler"
-    
-    key = redis_client.build_key(crawler_name, parameter, domain_name)
-    redis_client.set_crawler_response(key, response)
-    return response
-
-
+            redis_client.set_crawler_response(key, str(e), expiration=4)

@@ -14,7 +14,7 @@ class ClientAuthentication(BaseAuthentication):
             return logger.error("No client id found")
         try:
             customer = Company.objects.get(uuid=company)
-        except customer.DoesNotExist:
+        except Company.DoesNotExist:
             raise AuthenticationFailed('No customer with this uuid found.')
 
         return (customer, None)  

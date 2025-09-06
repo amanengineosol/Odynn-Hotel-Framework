@@ -22,5 +22,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('user/', include('gatekeeper.urls'), name='user'),
     path('jobhub/', include('jobhub.urls'), name='job'),
-    path('sendRequest/', include('apiservice.urls'), name='api')
+    path('api/sendRequest/', include('apiservice.urls'), name='api')
 ]

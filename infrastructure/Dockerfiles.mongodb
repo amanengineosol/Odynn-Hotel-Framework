@@ -1,0 +1,16 @@
+# Use the official MongoDB image version 6.0 as base
+FROM mongo:6.0
+
+# Expose default MongoDB port
+EXPOSE 27017
+
+# Optional: If you want to add custom MongoDB configuration or scripts,
+# you can copy them here like:
+# COPY mongod.conf /etc/mongod.conf
+# COPY init_scripts/ /docker-entrypoint-initdb.d/
+
+# By default, the official mongo image will start mongod and use
+# the MONGO_INITDB_ROOT_USERNAME and MONGO_INITDB_ROOT_PASSWORD environment variables
+# defined in docker-compose to create the root user.
+
+# No additional CMD needed, use the default entrypoint/cmd from mongo image
