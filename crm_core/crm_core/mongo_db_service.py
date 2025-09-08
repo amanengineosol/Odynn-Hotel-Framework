@@ -51,10 +51,10 @@ password_encoded = urllib.parse.quote_plus(str(password)) if password else ''
 
 # Construct the MongoDB URI with authentication if username and password are provided
 if username and password:
-    MONGO_URI = f'mongodb://{username_encoded}:{password_encoded}@localhost:27017/{MONGO_DB_NAME}?authSource=admin'
+    MONGO_URI = f'mongodb://{username_encoded}:{password_encoded}@mongodb:27017/{MONGO_DB_NAME}?authSource=admin'
 else:
     # Fallback to no authentication local URI
-    MONGO_URI = f'mongodb://localhost:27017/{MONGO_DB_NAME}'
+    MONGO_URI = f'mongodb://mongodb:27017/{MONGO_DB_NAME}'
 
 # Create MongoClient
 client = MongoClient(MONGO_URI)

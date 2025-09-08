@@ -13,6 +13,12 @@ services:
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   redis:
     build:
@@ -25,6 +31,12 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   postgres:
     build:
@@ -34,12 +46,19 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: Pass@123
+      POSTGRES_USER: odynn
+      POSTGRES_PASSWORD: Pass123
       POSTGRES_DB: odynn_platform
+      TZ: Asia/Kolkata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U odynn_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mongodb:
     build:
@@ -54,10 +73,73 @@ services:
     volumes:
       - mongodb_data:/data/db
     restart: unless-stopped
+    # Optional: add healthcheck if you want
+
+  crm_core:
+    build:
+      context: ..
+      dockerfile: crm_core/Dockerfile.crm_core
+    container_name: crm_core
+    ports:
+      - "8000:8000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    environment:
+      DJANGO_SETTINGS_MODULE: crm_core.settings.development
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: crm_core/Dockerfile.marriott_consumer
+    container_name: marriott_consumer
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: crm_core.settings.development
+    restart: unless-stopped
+    command: ["celery", "-A", "crm_core", "worker", "-n", "marriott_worker", "-Q", "Marriott", "--loglevel=INFO"]
+
+  flower:
+    build:
+      context: ..
+      dockerfile: crm_core/Dockerfile.flower
+    container_name: flower
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: "amqp://admin:Pass123@rabbitmq:5672//"
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfiles.nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./crm_core/staticfiles:/usr/share/nginx/static:ro
+    depends_on:
+      - crm_core
+
 
 volumes:
   rabbitmq_data:
   redis_data:
   postgres_data:
   mongodb_data:
-

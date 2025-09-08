@@ -1,0 +1,25 @@
+# infrastructure/Dockerfile.flower
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+
+# Copy requirements file (adjust path if needed)
+COPY ../crm_core/dev_requirements.txt /app/requirements.txt
+
+# Install python dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+COPY ../crm_core /app
+
+# Install Flower (and optionally Celery if needed)
+RUN pip install --no-cache-dir flower
+
+# Expose Flower default web port
+EXPOSE 5555
+
+# Default command to run Flower, customize broker URL via environment variable
+CMD ["celery", "-A", "crm_core", "flower", "--port=5555", "--auto-refresh"]

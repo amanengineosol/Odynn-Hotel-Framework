@@ -68,12 +68,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'crm_core.wsgi.application'
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'odynn_platform',          # From POSTGRES_DB
+        'USER': 'admin',                   # From POSTGRES_USER
+        'PASSWORD': 'Pass@123',            # From POSTGRES_PASSWORD
+        'HOST': 'localhost',               # If Django runs on host machine
+        'PORT': '5432',
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {

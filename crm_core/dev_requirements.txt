@@ -8,3 +8,5 @@ flower
 pymongo
 dnspython
 requests
+psycopg2-binary
+gunicorn

@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 redis_client= CrawlerRedisClient(0)
 
-@shared_task
+@shared_task(rate_limit="10/m")
 def process_live_request(request_data):
     logger.info(f"Processing request: {request_data.get('request_id')}")
     crawler_name = request_data['site_name']
@@ -26,6 +26,7 @@ def process_live_request(request_data):
         }
     else:
         try:
+
             response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
             if response['status_code'] == 200:
                 redis_client.set_crawler_response(key, response, expiration=10800)

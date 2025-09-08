@@ -1,0 +1,32 @@
+
+
+FROM python:3.11-slim
+
+# Set environment variables for Python
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
+
+# Install system dependencies (add more as needed for your dependencies)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements file (uses dev_requirements.txt per your structure)
+COPY ./crm_core/dev_requirements.txt /app/requirements.txt
+
+# Install Python dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+# Copy Django project code
+COPY ./crm_core /app
+
+# Optionally copy .env if you use one for secrets/settings
+# COPY ./crm_core/.env /app/.env
+
+COPY ./crm_core/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+CMD ["/app/entrypoint.sh"]

@@ -1,12 +1,5 @@
-# Use official PostgreSQL image
 FROM postgres:15
 
-# Expose default PostgreSQL port
 EXPOSE 5432
 
-# Environment variables can be set when running the container or in Docker Compose
-# - POSTGRES_USER
-# - POSTGRES_PASSWORD
-# - POSTGRES_DB
-
-# Default command runs PostgreSQL server
+COPY init-db/ /docker-entrypoint-initdb.d/
