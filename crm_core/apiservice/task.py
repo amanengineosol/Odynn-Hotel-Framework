@@ -1,6 +1,7 @@
 from celery import shared_task
 from .crawler_dispatcher import CRAWLER_FETCH_RESPONSE_MAP
 from crm_core.redis.cache_processor import CrawlerRedisClient
+from crm_core.mongo_db_service import save_request_response_to_db
 import logging
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,13 @@ def process_live_request(request_data):
 
             response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
             if response['status_code'] == 200:
+                save_request_response_to_db(request_data, response)
                 redis_client.set_crawler_response(key, response, expiration=10800)
                 return response
+            save_request_response_to_db(request_data, response)
             redis_client.set_crawler_response(key, response, expiration=4)
             return response
 
         except Exception as e:
+            save_request_response_to_db(request_data, response)
             redis_client.set_crawler_response(key, str(e), expiration=4)

@@ -101,7 +101,8 @@ class Hotel(APIView):
         if cached_response:
             logger.info("Cached response found for this request; returning cached data")
             save_request_response_to_db(req, cached_response)
-            return apiResponse({'request': req, 'response': cached_response, 'detail': 'Cached response returned'}, status=status.HTTP_200_OK)
+            status_code = cached_response.get('status_code', 200)
+            return apiResponse({'request': req, 'response': cached_response, 'detail': 'Cached response returned'}, status=status_code)
 
         # No cached response found, enqueue task asynchronously
         send_live_request_to_queue(req, req['site_name'])
@@ -132,7 +133,8 @@ class Hotel(APIView):
             return apiResponse({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if cached_response:
-            return apiResponse({'response': cached_response, 'detail': 'Cached response found'}, status=status.HTTP_200_OK)
+            status_code = cached_response.get('status_code', 200)
+            return apiResponse({'response': cached_response, 'detail': 'Cached response found'}, status=status_code)
         else:
             return apiResponse({'detail': 'Response not yet available'}, status=status.HTTP_404_NOT_FOUND)
 
