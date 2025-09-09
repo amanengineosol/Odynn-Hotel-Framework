@@ -75,13 +75,13 @@ services:
     restart: unless-stopped
     # Optional: add healthcheck if you want
 
-  crm_core:
+  crm-core:
     build:
       context: ..
       dockerfile: crm_core/Dockerfile.crm_core
-    container_name: crm_core
+    container_name: crm-core
     ports:
-      - "8000:8000"
+      - "80:80"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -131,11 +131,21 @@ services:
       context: .
       dockerfile: Dockerfiles.nginx
     ports:
-      - "80:80"
+      - "8000:8000"
     volumes:
-      - ./crm_core/staticfiles:/usr/share/nginx/static:ro
+      - ./staticfiles:/usr/share/nginx/static:ro
+
     depends_on:
-      - crm_core
+      - crm-core
+  
+  fastapi:
+    build:
+      context: ..
+      dockerfile: wrapper_api/Dockerfiles.app
+    ports:
+      - "9000:9000"
+    depends_on:
+      - crm-core
 
 
 volumes:
