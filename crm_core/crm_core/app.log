@@ -1,8 +1,0 @@
-[2025-09-06 18:23:39,036] ERROR celery.utils.dispatch.signal 29500 32460 Signal handler <function setup_dynamic_queues at 0x0000024D0BF8E520> raised: RuntimeError('Celery broker/Message queue is Down. Try again later.')
-Traceback (most recent call last):
-  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\celery\utils\dispatch\signal.py", line 280, in send
-    response = receiver(signal=self, sender=sender, **named)
-  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\crm_core\crm_core\celery.py", line 75, in setup_dynamic_queues
-    raise RuntimeError("Celery broker/Message queue is Down. Try again later.")
-RuntimeError: Celery broker/Message queue is Down. Try again later.
-[2025-09-06 18:29:14,854] INFO apiservice.authentication 20668 25684 Authenticating request using ClientAuthentication
