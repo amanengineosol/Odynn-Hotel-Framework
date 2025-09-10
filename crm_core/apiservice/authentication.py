@@ -9,13 +9,14 @@ class ClientAuthentication(BaseAuthentication):
    
 
     def authenticate(self, request):
-        logger.info("Authenticating request using ClientAuthentication")
+        logger.info("Authenticating request..")
         company = request.data.get('client_id')
         if not company:
             return logger.error("No client id found")
         try:
             customer = Company.objects.get(uuid=company)
         except Company.DoesNotExist:
+            logger.warning(f"User with this cloud id does not exist in db")
             raise AuthenticationFailed(detail="Wrong UUID provided. Please check your client id.")
         except ValidationError:
             raise AuthenticationFailed(detail="Wrong UUID provided. Please check your client id.")
