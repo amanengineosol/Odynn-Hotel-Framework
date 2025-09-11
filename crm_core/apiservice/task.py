@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 redis_client= CrawlerRedisClient(0)
 
-@shared_task(rate_limit="10/m")
+@shared_task(rate_limit="40/m")
 def process_live_request(request_data):
     logger.info(f"Processing request: {request_data.get('request_id')}")
     crawler_name = request_data['site_name']

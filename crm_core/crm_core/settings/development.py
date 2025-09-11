@@ -26,11 +26,11 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_THROTTLE_CLASSES': [
         'apiservice.throttling.CustomerRateThrottle',
-        # 'apiservice.throttling.UserCrawlerRateThrottle',
+       
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'customer': '60/minute',
-        # 'user_crawler': '5/minute',
+        'customer': '80/minute',
+        
     }
 }
 
@@ -39,7 +39,5 @@ CELERY_RESULT_BACKEND = None
 CELERY_RESULT_EXPIRES = 300
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Kolkata'
-enable_utc = False
-
-# Other dev-specific settings can be added here (e.g., email-backend console)
+CELERY_TIMEZONE = 'UTC'
+enable_utc = True
