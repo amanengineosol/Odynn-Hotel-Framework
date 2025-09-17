@@ -20,9 +20,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY ../crm_core/dev_requirements.txt /app/requirements.txt
 
 # Install python dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-RUN playwright install
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    playwright install && \
+    playwright install-deps
+
 
 # Copy application code
 COPY ../crm_core /app

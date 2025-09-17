@@ -91,12 +91,10 @@ class ExtractMarriott:
                 session = requests.Session()
                 session.proxies.update(proxies)
                 session.headers.update(headers)
-                print(session.headers)
 
                 # 1. Homepage
                 url_home = "https://www.marriott.com/default.mi"
                 resp1 = session.get(url_home, timeout=10)
-                print(resp1.status_code)
                 if not handle_response_status(resp1, "1 - Home_Page"):
                     return self.build_response(False, f"Homepage request failed", resp1.status_code)
 
@@ -112,7 +110,6 @@ class ExtractMarriott:
                     'accept-language': 'en-US,en;q=0.9'
                 }
                 resp3 = session.get(url_js, headers=headers_js, timeout=10)
-                print(resp3.status_code)
                 if not handle_response_status(resp3, "3 - JS_Page"):
                     return self.build_response(False, f"JS page request failed", resp3.status_code)
 
@@ -158,7 +155,6 @@ class ExtractMarriott:
                     'referer': ref_url
                 }
                 resp4 = session.post(url_gql, headers=headers_gql, data=payload_gql, timeout=15)
-                print(resp4.status_code)
                 if not handle_response_status(resp4, "4 - Standard_Form_Page"):
                     return self.build_response(False, f"Standard form page request failed", resp4.status_code)
 
@@ -168,7 +164,6 @@ class ExtractMarriott:
 
                 # 4. Submit Form Page
                 url_submit_form = f"https://www.marriott.com/reservation/availabilitySearch.mi?destinationAddress.country=&lengthOfStay={length_of_stay}&fromDate={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&toDate={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&numberOfRooms=1&numberOfAdults={guest_count}&guestCountBox={guest_count}+Adults+Per+Room&childrenCountBox=0+Children+Per+Room&roomCountBox=1+Rooms&childrenCount=0&childrenAges=&clusterCode=none&corporateCode=&groupCode=&isHwsGroupSearch=true&propertyCode={hotel_id.upper()}&useRewardsPoints=true&flexibleDateSearch=false&t-start={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&t-end={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromDateDefaultFormat={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&toDateDefaultFormat={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromToDate_submit={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromToDate="
-                print(url_submit_form)
                 headers_submit = {
                     'upgrade-insecure-requests': '1',
                     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
@@ -180,7 +175,6 @@ class ExtractMarriott:
                     'accept-language': 'en-US,en;q=0.9'
                 }
                 resp5 = session.get(url_submit_form, headers=headers_submit, timeout=25)
-                print(resp5.status_code)
                 if resp5.status_code == 403:
                     logger.warning("Cookies failed at form submission page.")
                     if attempt + 1 < max_retries:
@@ -207,7 +201,6 @@ class ExtractMarriott:
                     'accept-language': 'en-US,en;q=0.9'
                 }
                 resp7 = session.get(url_next_js, headers=headers_next_js, timeout=15)
-                print(resp7.status_code)
                 if not handle_response_status(resp7, "7 - Next_JS_Page"):
                     return self.build_response(False, f"Next JS page request failed", resp7.status_code)
 
@@ -328,7 +321,6 @@ class ExtractMarriott:
                     'referer': 'https://www.marriott.com/reservation/rateListMenu.mi'
                 }
                 resp10 = session.post(url_promotional, headers=headers_promo, data=payload_promo, timeout=20)
-                print(resp10.status_code)
                 if resp10.status_code == 403:
                     logger.warning("Cookies failed at promo page.")
                     if attempt + 1 < max_retries:

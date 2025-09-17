@@ -37,30 +37,35 @@ class ExtractHyatt:
             browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
         self._headers = headers
 
+    def build_response(self, success: bool, data, status_code: int):
+        return {
+            "Success": success,
+            "data": data,
+            "status_code": status_code
+        }
+
     def wait_for_cookies(self, context, timeout=60, poll_interval=2):
         waited = 0
         while waited < timeout:
             cookies = context.cookies()
             for cookie in cookies:
                 if cookie["name"].startswith("tkrm_alpekz_s1.3"):
-                    print("Required cookies found:", cookie["name"])
+                    logger.info("Required cookies found:", cookie["name"])
                     return cookies
-            print(f"No required cookies found yet. Waiting {poll_interval}s more...")
             time.sleep(poll_interval)
             waited += poll_interval
-        print("Timeout waiting for required cookies.")
         return context.cookies()
 
     def save_cookies_to_file(self, cookies):
         with open(self.COOKIE_FILE, "w", encoding="utf-8") as f:
             json.dump(cookies, f, ensure_ascii=False, indent=4)
-        print(f"Cookies saved to {self.COOKIE_FILE}")
+        logger.info(f"Cookies saved to {self.COOKIE_FILE}")
 
     def load_cookies_from_file(self):
         try:
             with open(self.COOKIE_FILE, "r", encoding="utf-8") as f:
                 cookies = json.load(f)
-            print(f"Loaded cookies from {self.COOKIE_FILE}")
+            logger.info(f"Loaded cookies from {self.COOKIE_FILE}")
 
             now = datetime.now(timezone.utc).timestamp()
             valid_cookies = []
@@ -77,7 +82,7 @@ class ExtractHyatt:
             return valid_cookies
 
         except FileNotFoundError:
-            print("No cookie file found.")
+            logger.error("No cookie file found.")
             return None
 
     def get_freshCookies(self, hotel_id, check_in_date, check_out_date, guest_count):
@@ -105,7 +110,7 @@ class ExtractHyatt:
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(
-                    headless=False,
+                    headless=True,
                     proxy=proxy,
                     args=[
                         "--disable-blink-features=AutomationControlled",
@@ -136,14 +141,14 @@ class ExtractHyatt:
                     page.goto("https://www.hyatt.com/", wait_until="load", timeout=120000)
                     human_delay(12, 30)
 
-                    page.locator('input[data-id="location"]').wait_for(timeout=80000)
+                    page.locator('input[data-id="location"]').wait_for(timeout=120000)
                     page.get_by_role("button", name="Find Hotels").wait_for(timeout=80000)
 
                     logger.info("Home page request completed successfully.....")
 
                     cookies = self.wait_for_cookies(context)
                     time.sleep(35)
-                    print("Cookies captured:")
+                    logger.info("Cookies captured:")
                     self.save_cookies_to_file(cookies)
                     return cookies
 
@@ -184,14 +189,14 @@ class ExtractHyatt:
         hotel_name = parts[1].strip() if len(parts) > 1 else ""
         logger.info(f"Hotel Name: {hotel_name}")
         encoded_hotel_name = quote(hotel_name, safe="")
-        file_path = "hyatt_sync_response.txt"
+        # file_path = "hyatt_sync_response.txt"
 
         # ---------------- Retry Loop ----------------
         for attempt in range(max_retries):
             try:
                 suggestion_url = (
                     f"https://www.hyatt.com/quickbook/autocomplete?"
-                    f"query={encoded_hotel_name.replace('%2F','/')}&locale=en-US&includeGoogleSuggestions=true"
+                    f"query={encoded_hotel_name.replace('%2F', '/')}&locale=en-US&includeGoogleSuggestions=true"
                 )
 
                 logger.info(f"[Attempt {attempt + 1}] Suggestion API: {suggestion_url}")
@@ -214,11 +219,11 @@ class ExtractHyatt:
                         sess = self.transfer_cookies_to_session(cookies)
                         continue
                     else:
-                        raise Exception("Failed after retries (suggestion API).")
+                        return self.build_response(False, suggestion_response.text, suggestion_response.status_code)
 
                 selectHotel_url = (
                     f"https://www.hyatt.com/HyattSearch?locale=en-US&spiritCode={hotel_id}"
-                    f"&newAutocomplete=&location={encoded_hotel_name.replace('%20','+')}"
+                    f"&newAutocomplete=&location={encoded_hotel_name.replace('%20', '+')}"
                     f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
                     f"&rooms=1&adults={guest_count}&kids=0&rate=Standard"
                     f"&offercode=&corp_id=&rateFilter=woh"
@@ -250,10 +255,7 @@ class ExtractHyatt:
                         sess = self.transfer_cookies_to_session(cookies)
                         continue
                     else:
-                        with open(file_path, "a", encoding="utf-8") as f:
-                            f.write(str(selectHotel_response.status_code))
-                            f.write("\n")
-                        raise Exception("Failed after retries (hotel selection).")
+                        return self.build_response(False, selectHotel_response.text, selectHotel_response.status_code)
 
                 # Roomrate API
                 url = (
@@ -279,20 +281,19 @@ class ExtractHyatt:
                 text_resp = response.text
 
                 if response.status_code == 200:
-                    logger.info(f"Saving API Response at Path: {file_path}")
-                    with open(file_path, "a", encoding="utf-8") as f:
-                        f.write(str(response.status_code))
-                        f.write("\n")
-
+                    logger.info(f"Response fetched successfully from Roomrate API")
                     try:
-                        json_data = json.loads(text_resp)
+                        json_data = json.dumps(text_resp)
+                        return self.build_response(True, response.json(), response.status_code)
                     except json.JSONDecodeError:
                         logger.warning("Response is not valid JSON")
                         json_data = {"raw_response": text_resp}
-                    return json_data
+                        return self.build_response(False, json_data, response.status_code)
+
                 else:
                     logger.error(f"Roomrate API failed with status {response.status_code}")
-                    return None
+                    return self.build_response(False, text_resp, response.status_code)
+
 
             except Exception as ex:
                 logger.exception(f"Attempt {attempt + 1} failed: {ex}")
@@ -302,18 +303,3 @@ class ExtractHyatt:
                     logger.info("Retrying...")
 
         return None
-
-
-# ---------------- Runner ----------------
-# if __name__ == "__main__":
-#     crawl = ExtractHyatt()
-#     data = crawl.get_search_data(
-#         hotel_id="bhmhr-Hyatt Regency Birmingham - The Wynfrey Hotel",
-#         check_in_date="2025-11-02",
-#         check_out_date="2025-11-04",
-#         guest_count=1,
-#     )
-#     if data:
-#         print("API data fetched successfully")
-#     else:
-#         print("API data could not be fetched with current cookies")
