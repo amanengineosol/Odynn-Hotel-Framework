@@ -46,13 +46,11 @@ async def hotel_wrapper(request_body: HotelRequest):
                 logger.error("Key missing in POST method response")
                 raise HTTPException(status_code=500, detail="Key missing in Django response")
             poll_url = f"{DJANGO_URL}?key={key}"
-            max_wait = 120  
+            max_wait = 300
             interval = 2    
             waited = 0
-            logger.info(f"Polling {poll_url} for up to {max_wait}s")
             while waited < max_wait:
                 poll_resp = await client.get(poll_url)
-                logger.info(f"Poll attempt after {waited}s - Status: {poll_resp.status_code}")
                 if poll_resp.status_code != 404: 
                     crawler_response_data = poll_resp.json().get("response",{})
                     combined = {
@@ -65,7 +63,7 @@ async def hotel_wrapper(request_body: HotelRequest):
                 waited += interval
             logger.error(f"Timed out waiting for hotel response in cache for key {key}")
             raise HTTPException(
-                status_code=202,
+                status_code=504,
                 detail="Timed out waiting for hotel response in cache"
             )
         else:
