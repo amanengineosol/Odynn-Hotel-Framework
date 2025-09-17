@@ -10,3 +10,4 @@ dnspython
 requests
 psycopg2-binary
 gunicorn
+playwright

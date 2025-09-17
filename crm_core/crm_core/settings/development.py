@@ -29,7 +29,7 @@ REST_FRAMEWORK = {
        
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'customer': '80/minute',
+        'customer': '60/minute',
         
     }
 }

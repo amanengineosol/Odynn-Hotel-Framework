@@ -5,7 +5,7 @@ from ..forms import LoginForm
 
 class Login(View):
     
-    template_name = "gatekeeper\html\login.html"
+    template_name = "gatekeeper/html/login.html"
     
     def get(self, request, *args, **kwargs):
         form = LoginForm()
