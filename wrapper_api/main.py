@@ -27,7 +27,7 @@ class HotelRequest(BaseModel):
     retry_count: int
     parameter: dict
     
-limiter = RateLimiter(times=80, seconds=60)
+limiter = RateLimiter(times=60, seconds=60)
 @app.post("/sendRequest/",dependencies=[Depends(ip_whitelist),Depends(limiter)])
 async def hotel_wrapper(request_body: HotelRequest):
     async with httpx.AsyncClient() as client:
