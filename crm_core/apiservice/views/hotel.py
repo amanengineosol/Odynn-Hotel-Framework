@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 redis_client = CrawlerRedisClient(0)
 
 class Hotel(APIView):
-    throttle_classes = [CustomerRateThrottle]
+    # throttle_classes = [CustomerRateThrottle]
 
     def post(self, request):
         logger.info("Received POST request from /sendRequest/")

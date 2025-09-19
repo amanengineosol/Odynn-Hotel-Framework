@@ -3,3 +3,4 @@ httpx
 uvicorn
 fastapi_throttle
 watchtower
+starlette
