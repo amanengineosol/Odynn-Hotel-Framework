@@ -36,6 +36,7 @@ class ExtractHyatt:
         while browser_family != "chromium":
             browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
         self._headers = headers
+        self._headers["cache-control"] = "no-cache"
 
     def build_response(self, success: bool, data, status_code: int):
         return {
@@ -50,7 +51,7 @@ class ExtractHyatt:
             cookies = context.cookies()
             for cookie in cookies:
                 if cookie["name"].startswith("tkrm_alpekz_s1.3"):
-                    logger.info("Required cookies found:", cookie["name"])
+                    logger.info(f"Required cookies found: {cookie['name']}")
                     return cookies
             time.sleep(poll_interval)
             waited += poll_interval
@@ -120,7 +121,7 @@ class ExtractHyatt:
                         "--disable-gpu",
                         "--disable-infobars",
                         "--ignore-certificate-errors",
-                        "--enable-features=NetworkService,NetworkServiceInProcess",
+                        "--enable-features=NetworkService,NetworkServiceInProcess"
                     ],
                 )
                 try:
@@ -128,6 +129,8 @@ class ExtractHyatt:
                     extra_headers = {
                         k: v for k, v in self._headers.items() if k.lower() != "user-agent"
                     }
+
+                    logger.info(f"Selected UA: {self._headers['user-agent']}")
 
                     context = browser.new_context(
                         user_agent=self._headers["user-agent"],
@@ -147,6 +150,9 @@ class ExtractHyatt:
                     logger.info("Home page request completed successfully.....")
 
                     cookies = self.wait_for_cookies(context)
+                    if not cookies:
+                        logger.error("No cookies captured, retrying...")
+                        return None
                     time.sleep(35)
                     logger.info("Cookies captured:")
                     self.save_cookies_to_file(cookies)
@@ -174,14 +180,6 @@ class ExtractHyatt:
         return sess
 
     def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=2):
-        # ---------------- Cookie Handling ----------------
-        cookies = self.load_cookies_from_file()
-        if not cookies:
-            logger.info("No valid cookies found. Fetching new cookies...")
-            cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
-
-        # ---------------- Session Setup ----------------
-        sess = self.transfer_cookies_to_session(cookies)
         hotel_id_name = hotel_id
         parts = hotel_id_name.split("-", 1)
         hotel_id = parts[0].strip()
@@ -189,10 +187,20 @@ class ExtractHyatt:
         hotel_name = parts[1].strip() if len(parts) > 1 else ""
         logger.info(f"Hotel Name: {hotel_name}")
         encoded_hotel_name = quote(hotel_name, safe="")
-        # file_path = "hyatt_sync_response.txt"
 
         # ---------------- Retry Loop ----------------
         for attempt in range(max_retries):
+            # ---------------- Cookie Handling ----------------
+            cookies = self.load_cookies_from_file()
+            if not cookies:
+                logger.info("No valid cookies found. Fetching new cookies...")
+                cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
+                if not cookies:
+                    logger.error("No cookies captured, aborting")
+                    return None
+
+            # ---------------- Session Setup ----------------
+            sess = self.transfer_cookies_to_session(cookies)
             try:
                 suggestion_url = (
                     f"https://www.hyatt.com/quickbook/autocomplete?"
@@ -303,3 +311,17 @@ class ExtractHyatt:
                     logger.info("Retrying...")
 
         return None
+
+# ---------------- Runner ----------------
+if __name__ == "__main__":
+    crawl = ExtractHyatt()
+    data = crawl.get_search_data(
+        hotel_id="bhmhr-Hyatt Regency Birmingham - The Wynfrey Hotel",
+        check_in_date="2025-11-02",
+        check_out_date="2025-11-04",
+        guest_count=1,
+    )
+    if data:
+        print("API data fetched successfully")
+    else:
+        print("API data could not be fetched with current cookies")
