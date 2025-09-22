@@ -292,10 +292,16 @@ class ExtractHyatt:
                     except Exception:
                         data_json = ""
 
-                if response.status_code == 200 and data_json and "lowestAvgPointValue" in response.text:
+                if response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" in response.text:
                     logger.info(f"Response fetched successfully from Roomrate API")
                     return self.build_response(True, data_json, response.status_code)
-                elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "lowestAvgPointValue" not in response.text):
+                elif response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" not in response.text:
+                    logger.error(f"Room for Hotel is not available at selected date.")
+                    message = {
+                        "details":"Room for Hotel is not available at selected date."
+                    }
+                    return self.build_response(True, message, response.status_code)
+                elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "roomRates" not in response.text):
                         cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
                         sess = self.transfer_cookies_to_session(cookies)
                         continue
