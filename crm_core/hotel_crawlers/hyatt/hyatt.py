@@ -286,10 +286,19 @@ class ExtractHyatt:
                 })
 
                 response = sess.get(url)
-                if response.status_code == 200 and response.json() and "roomRates" in response.text:
-                    logger.info(f"Response fetched successfully from Roomrate API")
-                    return self.build_response(True, response.json(), response.status_code)
+                if response.status_code == 200:
+                    try:
+                        data_json = response.json()
+                    except Exception:
+                        data_json = ""
 
+                if response.status_code == 200 and data_json and "lowestAvgPointValue" in response.text:
+                    logger.info(f"Response fetched successfully from Roomrate API")
+                    return self.build_response(True, data_json, response.status_code)
+                elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "lowestAvgPointValue" not in response.text):
+                        cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
+                        sess = self.transfer_cookies_to_session(cookies)
+                        continue
                 else:
                     logger.error(f"Roomrate API failed with status {response.status_code}")
                     return self.build_response(False, response.text, response.status_code)
