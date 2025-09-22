@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 DEBUG = True
 
-ALLOWED_HOSTS = ['*', 'crm-core:8000']
+ALLOWED_HOSTS = ['*', 'crm-core:8000','http://k8s-stage-crmcorei-801bd72af5-1729448934.us-east-1.elb.amazonaws.com/api/sendRequest/hotel/']
 
 DATABASES = {
     'default': {

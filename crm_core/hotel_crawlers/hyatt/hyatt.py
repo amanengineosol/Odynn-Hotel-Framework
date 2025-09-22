@@ -38,7 +38,7 @@ class ExtractHyatt:
         self._headers = headers
         self._headers["cache-control"] = "no-cache"
 
-    def build_response(self, success: bool, data, status_code: int):
+    def build_response(self, success: bool, data: any, status_code: int):
         return {
             "Success": success,
             "data": data,
@@ -287,14 +287,15 @@ class ExtractHyatt:
 
                 response = sess.get(url)
                 text_resp = response.text
-
+                logger.info(f"text_resp: {text_resp}")
                 if response.status_code == 200:
                     logger.info(f"Response fetched successfully from Roomrate API")
                     try:
-                        json_data = json.dumps(text_resp)
+                        #json_data = json.dumps(text_resp)
                         return self.build_response(True, response.json(), response.status_code)
                     except json.JSONDecodeError:
                         logger.warning("Response is not valid JSON")
+                        logger.info(f"inside JSONDECODE Error: {text_resp}")
                         json_data = {"raw_response": text_resp}
                         return self.build_response(False, json_data, response.status_code)
 
