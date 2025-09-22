@@ -286,22 +286,13 @@ class ExtractHyatt:
                 })
 
                 response = sess.get(url)
-                text_resp = response.text
-                logger.info(f"text_resp: {text_resp}")
-                if response.status_code == 200:
+                if response.status_code == 200 and response.json() and "roomRates" in response.text:
                     logger.info(f"Response fetched successfully from Roomrate API")
-                    try:
-                        #json_data = json.dumps(text_resp)
-                        return self.build_response(True, response.json(), response.status_code)
-                    except json.JSONDecodeError:
-                        logger.warning("Response is not valid JSON")
-                        logger.info(f"inside JSONDECODE Error: {text_resp}")
-                        json_data = {"raw_response": text_resp}
-                        return self.build_response(False, json_data, response.status_code)
+                    return self.build_response(True, response.json(), response.status_code)
 
                 else:
                     logger.error(f"Roomrate API failed with status {response.status_code}")
-                    return self.build_response(False, text_resp, response.status_code)
+                    return self.build_response(False, response.text, response.status_code)
 
 
             except Exception as ex:
