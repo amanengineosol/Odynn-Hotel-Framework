@@ -100,7 +100,7 @@ class ExtractMarriott:
 
                 # 2. JS Page
                 ref_url = f"https://www.marriott.com/en-us/hotels/{hotel_name_original}/overview/"
-                url_js = "https://www.marriott.com/etc.clientlibs/mcom-hws/clientlibs/clientlib-sitev2.min.25dfc6cf6a8b94135a28f9b03e6ed02d.js"
+                url_js = "https://www.marriott.com/etc.clientlibs/mcom-hws/clientlibs/clientlib-sitev2.min.0bc65bb4ab7ee16ba94edb6dad88335c.js"
                 headers_js = {
                     'accept': '*/*',
                     'sec-fetch-site': 'same-origin',
@@ -191,7 +191,7 @@ class ExtractMarriott:
                     return self.build_response(False, f"Submit form page request failed", resp5.status_code)
 
                 # 5. Next JS Page
-                url_next_js = "https://www.marriott.com/mi-assets/mi-static/mi-book-renderer/phx-rel-R25.8.2-12aug20259pmist/_next/static/chunks/2424-b7ef29505ec20836.js"
+                url_next_js = "https://www.marriott.com/mi-assets/mi-static/mi-book-renderer/phx-rel-r25.9.2-06sep20257pmist/_next/static/chunks/27005-9c0a223a96c39cbe.js"
                 headers_next_js = {
                     'accept': '*/*',
                     'sec-fetch-site': 'same-origin',
@@ -365,3 +365,17 @@ class ExtractMarriott:
             except Exception as e:
                 logger.error(f"Unexpected error: {e}", exc_info=True)
                 return self.build_response(False, "Unexpected error occurred.", 500)
+
+# ---------------- Runner ----------------
+if __name__ == "__main__":
+    crawl = ExtractMarriott()
+    data = crawl.get_search_data(
+        hotel_id="snabp-courtyard-anaheim-buena-park",
+        check_in_date="2025-11-04",
+        check_out_date="2025-11-08",
+        guest_count=1,
+    )
+    if data:
+        print("API data fetched successfully")
+    else:
+        print("API data could not be fetched with current cookies")
