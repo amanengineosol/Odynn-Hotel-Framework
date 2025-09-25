@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import requests
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, quote
-
+import brotli
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
 
@@ -31,16 +31,10 @@ class ExtractHyatt:
 
     def __init__(self):
         self._proxy_fetcher = ProxyManager()
-        self._proxy_url = self._proxy_fetcher.fetch_proxy()
-        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        while browser_family != "chromium":
-            browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        self._headers = headers
-        self._headers["cache-control"] = "no-cache"
 
     def build_response(self, success: bool, data: any, status_code: int):
         return {
-            "Success": success,
+            "success": success,
             "data": data,
             "status_code": status_code
         }
@@ -86,12 +80,14 @@ class ExtractHyatt:
             logger.error("No cookie file found.")
             return None
 
-    def get_freshCookies(self, hotel_id, check_in_date, check_out_date, guest_count):
+    def get_freshSession(self, hotel_id, check_in_date, check_out_date, guest_count):
         logger.info("Getting proxy IP for current session")
-        if not self._proxy_url:
-            raise Exception("ERROR-101 : Proxy url not retrieved from the server")
+        _proxy_url = self._proxy_fetcher.fetch_proxy()
+        if not _proxy_url:
+            message = "Proxy url not retrieved from the server"
+            return self.build_response(success=False, data=message, status_code=101)
 
-        parsed = urlparse(self._proxy_url)
+        parsed = urlparse(_proxy_url)
         proxy = {
             "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
             "username": parsed.username,
@@ -100,6 +96,12 @@ class ExtractHyatt:
 
         logger.info("Proxy url dict created for request")
         logger.info("Setting up crawler to extract data")
+
+        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        while browser_family != "chromium":
+            browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        _headers = headers
+        _headers["cache-control"] = "no-cache"
 
         # Validate inputs
         check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
@@ -127,13 +129,13 @@ class ExtractHyatt:
                 try:
                     logger.info("Sending Home page request....")
                     extra_headers = {
-                        k: v for k, v in self._headers.items() if k.lower() != "user-agent"
+                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
                     }
 
-                    logger.info(f"Selected UA: {self._headers['user-agent']}")
+                    logger.info(f"Selected UA: {_headers['user-agent']}")
 
                     context = browser.new_context(
-                        user_agent=self._headers["user-agent"],
+                        user_agent=_headers["user-agent"],
                         locale="en-US",
                         extra_http_headers=extra_headers,
                     )
@@ -156,7 +158,20 @@ class ExtractHyatt:
                     time.sleep(35)
                     logger.info("Cookies captured:")
                     self.save_cookies_to_file(cookies)
-                    return cookies
+
+                    sess = requests.Session()
+                    proxies_requests = {"http": _proxy_url, "https": _proxy_url}
+                    sess.proxies.update(proxies_requests)
+                    sess.headers.update(_headers)
+                    for cookie in cookies:
+                        sess.cookies.set(
+                            cookie["name"],
+                            cookie["value"],
+                            domain=cookie.get("domain", ""),
+                            path=cookie.get("path", "/"),
+                        )
+
+                    return sess
 
                 except Exception as ex:
                     logger.exception(f"Exception occurred during scraping: {ex}")
@@ -166,20 +181,7 @@ class ExtractHyatt:
         except Exception as ex:
             logger.exception(f"Critical Error: {ex}")
 
-    def transfer_cookies_to_session(self, cookies):
-        proxies_requests = {"http": self._proxy_url, "https": self._proxy_url}
-        sess = requests.Session()
-        for cookie in cookies:
-            sess.cookies.set(
-                cookie["name"],
-                cookie["value"],
-                domain=cookie.get("domain", ""),
-                path=cookie.get("path", "/"),
-            )
-        sess.proxies.update(proxies_requests)
-        return sess
-
-    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=2):
+    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
         hotel_id_name = hotel_id
         parts = hotel_id_name.split("-", 1)
         hotel_id = parts[0].strip()
@@ -194,13 +196,29 @@ class ExtractHyatt:
             cookies = self.load_cookies_from_file()
             if not cookies:
                 logger.info("No valid cookies found. Fetching new cookies...")
-                cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
-                if not cookies:
+                sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
+                if not sess.cookies:
                     logger.error("No cookies captured, aborting")
                     return None
+            elif attempt == 0:
+                sess = requests.Session()
+                _proxy_url = self._proxy_fetcher.fetch_proxy()
+                proxies_requests = {"http": _proxy_url, "https": _proxy_url}
+                sess.proxies.update(proxies_requests)
+                browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                while browser_family != "chromium":
+                    browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                _headers = headers
+                _headers["cache-control"] = "no-cache"
+                sess.headers.update(_headers)
+                for cookie in cookies:
+                    sess.cookies.set(
+                        cookie["name"],
+                        cookie["value"],
+                        domain=cookie.get("domain", ""),
+                        path=cookie.get("path", "/"),
+                    )
 
-            # ---------------- Session Setup ----------------
-            sess = self.transfer_cookies_to_session(cookies)
             try:
                 suggestion_url = (
                     f"https://www.hyatt.com/quickbook/autocomplete?"
@@ -210,7 +228,7 @@ class ExtractHyatt:
                 logger.info(f"[Attempt {attempt + 1}] Suggestion API: {suggestion_url}")
                 sess.headers.update({
                     'x-requested-with': 'XMLHttpRequest',
-                    'user-agent': self._headers["user-agent"],
+                    # 'user-agent': self._headers["user-agent"],
                     'accept': 'application/json, text/javascript, */*; q=0.01',
                     'sec-fetch-site': 'same-origin',
                     'sec-fetch-mode': 'cors',
@@ -223,11 +241,10 @@ class ExtractHyatt:
                 if suggestion_response.status_code == 401:
                     logger.warning("Cookies rejected at suggestion API.")
                     if attempt + 1 < max_retries:
-                        cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
-                        sess = self.transfer_cookies_to_session(cookies)
+                        sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
                         continue
                     else:
-                        return self.build_response(False, suggestion_response.text, suggestion_response.status_code)
+                        return self.build_response(success=False, data=suggestion_response.text, status_code=suggestion_response.status_code)
 
                 selectHotel_url = (
                     f"https://www.hyatt.com/HyattSearch?locale=en-US&spiritCode={hotel_id}"
@@ -242,7 +259,7 @@ class ExtractHyatt:
                 sess.headers.pop("x-requested-with", None)
                 sess.headers.update({
                     'upgrade-insecure-requests': '1',
-                    'user-agent': self._headers["user-agent"],
+                    # 'user-agent': self._headers["user-agent"],
                     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                     'sec-fetch-site': 'same-origin',
                     'sec-fetch-mode': 'navigate',
@@ -259,11 +276,10 @@ class ExtractHyatt:
                 if selectHotel_response.status_code >= 400:
                     logger.warning("Cookies rejected at hotel selection.")
                     if attempt + 1 < max_retries:
-                        cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
-                        sess = self.transfer_cookies_to_session(cookies)
+                        sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
                         continue
                     else:
-                        return self.build_response(False, selectHotel_response.text, selectHotel_response.status_code)
+                        return self.build_response(success=False, data=selectHotel_response.text, status_code=selectHotel_response.status_code)
 
                 # Roomrate API
                 url = (
@@ -274,40 +290,50 @@ class ExtractHyatt:
                     f"&kids=0&rate=Standard&suiteUpgrade=true"
                 )
                 logger.info(f"Roomrate API: {url}")
-
+                sess.headers.pop("upgrade-insecure-requests", None)
+                sess.headers.pop("sec-fetch-user", None)
+                sess.headers.pop("Connection", None)
+                sess.headers.pop("cache-control", None)
                 sess.headers.update({
-                    "Accept": "*/*",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Referer": ref_url,
-                    "user-agent": self._headers["user-agent"],
-                    "Sec-Fetch-Dest": "empty",
-                    "Sec-Fetch-Mode": "cors",
-                    "Sec-Fetch-Site": "same-origin",
+                    "accept": "*/*",
+                    "accept-language": "en-US,en;q=0.9",
+                    "referer": ref_url,
+                    # "user-agent": self._headers["user-agent"],
+                    "sec-fetch-dest": "empty",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-site": "same-origin",
                 })
-
                 response = sess.get(url)
+                data_json = ''
+
                 if response.status_code == 200:
                     try:
                         data_json = response.json()
-                    except Exception:
-                        data_json = ""
+                    except Exception as e:
+                        message = {
+                            "details": "Response Json not available"
+                        }
+                        return self.build_response(success=False, data=message, status_code=response.status_code)
 
                 if response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" in response.text:
                     logger.info(f"Response fetched successfully from Roomrate API")
-                    return self.build_response(True, data_json, response.status_code)
+                    return self.build_response(success=True, data=data_json, status_code=response.status_code)
                 elif response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" not in response.text:
-                    logger.error(f"Room for Hotel is not available at selected date.")
+                    logger.error(f"Hotel is not available at selected date.")
                     message = {
-                        "details":"Room for Hotel is not available at selected date."
+                        "details":"Hotel is not available at selected date."
                     }
-                    return self.build_response(True, message, response.status_code)
+                    return self.build_response(success=True, data=message, status_code=response.status_code)
                 elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "roomRates" not in response.text):
-                        cookies = self.get_freshCookies(hotel_id, check_in_date, check_out_date, guest_count)
-                        sess = self.transfer_cookies_to_session(cookies)
+                        logger.info(f"Retrying as Roomrate API failed with status {response.status_code}")
+                        sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
                         continue
                 else:
                     logger.error(f"Roomrate API failed with status {response.status_code}")
-                    return self.build_response(False, response.text, response.status_code)
+                    message = {
+                        "details": f"Roomrate API failed with status {response.status_code}"
+                    }
+                    return self.build_response(success=False, data=message, status_code=response.status_code)
 
 
             except Exception as ex:
@@ -323,9 +349,13 @@ class ExtractHyatt:
 if __name__ == "__main__":
     crawl = ExtractHyatt()
     data = crawl.get_search_data(
-        hotel_id="bhmhr-Hyatt Regency Birmingham - The Wynfrey Hotel",
-        check_in_date="2025-11-02",
-        check_out_date="2025-11-04",
+        # hotel_id="yvrrv-Hyatt Regency Vancouver",
+        # check_in_date="2025-12-20",
+        # check_out_date="2025-12-24",
+        # guest_count=1,
+        hotel_id="m0207-Kinsterna Hotel",
+        check_in_date="2025-12-21",
+        check_out_date="2025-12-23",
         guest_count=1,
     )
     if data:
