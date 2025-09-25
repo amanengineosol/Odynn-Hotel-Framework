@@ -304,27 +304,35 @@ class ExtractHyatt:
                     "sec-fetch-site": "same-origin",
                 })
                 response = sess.get(url)
-                data_json = ''
+                data_json = None
+                decodedResponse = None
 
-                if response.status_code == 200:
+                if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
                     try:
-                        data_json = response.json()
-                    except Exception as e:
-                        message = {
-                            "details": "Response Json not available"
-                        }
-                        return self.build_response(success=False, data=message, status_code=response.status_code)
+                        decodedResponse = brotli.decompress(response.content).decode("utf-8")
+                    except brotli.error:
+                        decodedResponse = response.text
+                else:
+                    decodedResponse = response.text
 
-                if response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" in response.text:
+                try:
+                    data_json = json.loads(decodedResponse)
+                except Exception as e:
+                    message = {
+                        "details": "Response Json not available"
+                    }
+                    return self.build_response(success=False, data=message, status_code=response.status_code)
+
+                if response.status_code == 200 and data_json and "roomRates" in decodedResponse and "lowestAvgPointValue" in decodedResponse:
                     logger.info(f"Response fetched successfully from Roomrate API")
                     return self.build_response(success=True, data=data_json, status_code=response.status_code)
-                elif response.status_code == 200 and data_json and "roomRates" in response.text and "lowestAvgPointValue" not in response.text:
+                elif response.status_code == 200 and data_json and "roomRates" in decodedResponse and "lowestAvgPointValue" not in decodedResponse:
                     logger.error(f"Hotel is not available at selected date.")
                     message = {
                         "details":"Hotel is not available at selected date."
                     }
                     return self.build_response(success=True, data=message, status_code=response.status_code)
-                elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "roomRates" not in response.text):
+                elif attempt + 1 < max_retries and response.status_code == 200 and (not data_json or "roomRates" not in decodedResponse):
                         logger.info(f"Retrying as Roomrate API failed with status {response.status_code}")
                         sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
                         continue
@@ -349,14 +357,14 @@ class ExtractHyatt:
 if __name__ == "__main__":
     crawl = ExtractHyatt()
     data = crawl.get_search_data(
-        # hotel_id="yvrrv-Hyatt Regency Vancouver",
-        # check_in_date="2025-12-20",
-        # check_out_date="2025-12-24",
-        # guest_count=1,
-        hotel_id="m0207-Kinsterna Hotel",
-        check_in_date="2025-12-21",
-        check_out_date="2025-12-23",
+        hotel_id="yvrrv-Hyatt Regency Vancouver",
+        check_in_date="2025-12-20",
+        check_out_date="2025-12-24",
         guest_count=1,
+        # hotel_id="m0207-Kinsterna Hotel",
+        # check_in_date="2025-12-21",
+        # check_out_date="2025-12-23",
+        # guest_count=1,
     )
     if data:
         print("API data fetched successfully")
