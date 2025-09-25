@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import requests
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, quote
-import brotli
+# import brotli
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
 
@@ -129,7 +129,7 @@ class ExtractHyatt:
                 try:
                     logger.info("Sending Home page request....")
                     extra_headers = {
-                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
+                        k: v for k, v in _headers.items() if k.lower() != "user-agent" and "accept-encoding"
                     }
 
                     logger.info(f"Selected UA: {_headers['user-agent']}")
@@ -235,6 +235,7 @@ class ExtractHyatt:
                     'sec-fetch-dest': 'empty',
                     'referer': 'https://www.hyatt.com/',
                     'accept-language': 'en-US,en;q=0.9',
+                    "accept-encoding": "gzip, deflate"
                 })
 
                 suggestion_response = sess.get(suggestion_url)
@@ -266,7 +267,8 @@ class ExtractHyatt:
                     'sec-fetch-user': '?1',
                     'sec-fetch-dest': 'document',
                     'referer': 'https://www.hyatt.com/',
-                    'accept-language': 'en-US,en;q=0.9'
+                    'accept-language': 'en-US,en;q=0.9',
+                    "accept-encoding": "gzip, deflate"
                 })
 
                 selectHotel_response = sess.get(selectHotel_url)
@@ -302,26 +304,28 @@ class ExtractHyatt:
                     "sec-fetch-dest": "empty",
                     "sec-fetch-mode": "cors",
                     "sec-fetch-site": "same-origin",
+                    "accept-encoding": "gzip, deflate"
                 })
                 response = sess.get(url)
                 data_json = None
-                decodedResponse = None
+                decodedResponse = response.text
 
-                if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
+                # if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
+                #     try:
+                #         decodedResponse = brotli.decompress(response.content).decode("utf-8")
+                #     except brotli.error:
+                #         decodedResponse = response.text
+                # else:
+                #     decodedResponse = response.text
+
+                if response.status_code == 200 and decodedResponse:
                     try:
-                        decodedResponse = brotli.decompress(response.content).decode("utf-8")
-                    except brotli.error:
-                        decodedResponse = response.text
-                else:
-                    decodedResponse = response.text
-
-                try:
-                    data_json = json.loads(decodedResponse)
-                except Exception as e:
-                    message = {
-                        "details": "Response Json not available"
-                    }
-                    return self.build_response(success=False, data=message, status_code=response.status_code)
+                        data_json = json.loads(decodedResponse)
+                    except Exception as e:
+                        message = {
+                            "details": f"Response Json not available {e}"
+                        }
+                        return self.build_response(success=False, data=message, status_code=response.status_code)
 
                 if response.status_code == 200 and data_json and "roomRates" in decodedResponse and "lowestAvgPointValue" in decodedResponse:
                     logger.info(f"Response fetched successfully from Roomrate API")
