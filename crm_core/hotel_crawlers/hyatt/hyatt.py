@@ -9,6 +9,7 @@ from urllib.parse import urlparse, quote
 # import brotli
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
+from requests.utils import add_dict_to_cookiejar
 
 # ---------------- Log configuration ----------------
 logging.basicConfig(
@@ -163,13 +164,16 @@ class ExtractHyatt:
                     proxies_requests = {"http": _proxy_url, "https": _proxy_url}
                     sess.proxies.update(proxies_requests)
                     sess.headers.update(_headers)
-                    for cookie in cookies:
-                        sess.cookies.set(
-                            cookie["name"],
-                            cookie["value"],
-                            domain=cookie.get("domain", ""),
-                            path=cookie.get("path", "/"),
-                        )
+                    add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
+                    # for cookie in cookies:
+                    #     sess.cookies.set(
+                    #         cookie["name"],
+                    #         cookie["value"],
+                    #         domain=cookie.get("domain", ""),
+                    #         path=cookie.get("path", "/"),
+                    #     )
+
+                    logger.info(f"Cookies added to cookiejar....{sess.cookies}")
 
                     return sess
 
@@ -182,6 +186,7 @@ class ExtractHyatt:
             logger.exception(f"Critical Error: {ex}")
 
     def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
+        sess = None
         hotel_id_name = hotel_id
         parts = hotel_id_name.split("-", 1)
         hotel_id = parts[0].strip()
@@ -211,13 +216,34 @@ class ExtractHyatt:
                 _headers = headers
                 _headers["cache-control"] = "no-cache"
                 sess.headers.update(_headers)
-                for cookie in cookies:
-                    sess.cookies.set(
-                        cookie["name"],
-                        cookie["value"],
-                        domain=cookie.get("domain", ""),
-                        path=cookie.get("path", "/"),
-                    )
+                add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
+                # for cookie in cookies:
+                #     sess.cookies.set(
+                #         cookie["name"],
+                #         cookie["value"],
+                #         domain=cookie.get("domain", ""),
+                #         path=cookie.get("path", "/"),
+                #     )
+
+            elif sess is None:
+                sess = requests.Session()
+                _proxy_url = self._proxy_fetcher.fetch_proxy()
+                proxies_requests = {"http": _proxy_url, "https": _proxy_url}
+                sess.proxies.update(proxies_requests)
+                browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                while browser_family != "chromium":
+                    browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                _headers = headers
+                _headers["cache-control"] = "no-cache"
+                sess.headers.update(_headers)
+                add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
+                # for cookie in cookies:
+                #     sess.cookies.set(
+                #         cookie["name"],
+                #         cookie["value"],
+                #         domain=cookie.get("domain", ""),
+                #         path=cookie.get("path", "/"),
+                #     )
 
             try:
                 suggestion_url = (
