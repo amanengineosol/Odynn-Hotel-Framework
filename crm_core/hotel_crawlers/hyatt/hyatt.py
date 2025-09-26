@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import requests
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, quote
-# import brotli
+import brotli
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
 from requests.utils import add_dict_to_cookiejar
@@ -45,9 +45,16 @@ class ExtractHyatt:
         while waited < timeout:
             cookies = context.cookies()
             for cookie in cookies:
-                if cookie["name"].startswith("tkrm_alpekz_s1.3"):
-                    logger.info(f"Required cookies found: {cookie['name']}")
-                    return cookies
+                if (cookie["name"] == "source-country"
+                        or cookie["name"] == "source-region"
+                        or cookie["name"] == "AKA_A2"
+                        or cookie["name"] == "tkrm_alpekz_s1.3-ssn"
+                        or cookie["name"] == "tkrm_alpekz_s1.3"
+                        or cookie["name"] == "KP_REF"
+                        or cookie["name"] == "KP_IM") :
+                    if cookie["name"].startswith("tkrm_alpekz_s1.3"):
+                        logger.info(f"Required cookies found: {cookie['name']}")
+                        return cookies
             time.sleep(poll_interval)
             waited += poll_interval
         return context.cookies()
@@ -130,7 +137,7 @@ class ExtractHyatt:
                 try:
                     logger.info("Sending Home page request....")
                     extra_headers = {
-                        k: v for k, v in _headers.items() if k.lower() != "user-agent" and "accept-encoding"
+                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
                     }
 
                     logger.info(f"Selected UA: {_headers['user-agent']}")
@@ -376,7 +383,7 @@ class ExtractHyatt:
                     "sec-fetch-dest": "empty",
                     "sec-fetch-mode": "cors",
                     "sec-fetch-site": "same-origin",
-                    "accept-encoding": "gzip, deflate"
+                    # "accept-encoding": "gzip, deflate"
                 })
 
                 req = requests.Request("GET", url)
@@ -395,13 +402,13 @@ class ExtractHyatt:
 
                 logger.info(f"decodedResponse :: {decodedResponse}")
 
-                # if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
-                #     try:
-                #         decodedResponse = brotli.decompress(response.content).decode("utf-8")
-                #     except brotli.error:
-                #         decodedResponse = response.text
-                # else:
-                #     decodedResponse = response.text
+                if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
+                    try:
+                        decodedResponse = brotli.decompress(response.content).decode("utf-8")
+                    except brotli.error:
+                        decodedResponse = response.text
+                else:
+                    decodedResponse = response.text
 
                 if response.status_code == 200 and decodedResponse:
                     try:
