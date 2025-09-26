@@ -306,9 +306,22 @@ class ExtractHyatt:
                     "sec-fetch-site": "same-origin",
                     "accept-encoding": "gzip, deflate"
                 })
-                response = sess.get(url)
+
+                req = requests.Request("GET", url)
+                prepared = sess.prepare_request(req)
+
+                logger.info("=== Outgoing Request ===")
+                logger.info(f"{prepared.method} {prepared.url}")
+                for k, v in prepared.headers.items():
+                    logger.info(f"{k}: {v}")
+
+                response = sess.send(prepared)
+
+                # response = sess.get(url)
                 data_json = None
                 decodedResponse = response.text
+
+                logger.info(f"decodedResponse :: {decodedResponse}")
 
                 # if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
                 #     try:
