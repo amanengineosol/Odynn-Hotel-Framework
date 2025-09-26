@@ -239,6 +239,7 @@ class ExtractHyatt:
                 })
 
                 suggestion_response = sess.get(suggestion_url)
+                logger.info(f"suggestion_response :: {(suggestion_response.text)[:100]}")
                 if suggestion_response.status_code == 401:
                     logger.warning("Cookies rejected at suggestion API.")
                     if attempt + 1 < max_retries:
@@ -270,10 +271,21 @@ class ExtractHyatt:
                     'accept-language': 'en-US,en;q=0.9',
                     "accept-encoding": "gzip, deflate"
                 })
+                req = requests.Request("GET", selectHotel_url)
+                prepared = sess.prepare_request(req)
 
-                selectHotel_response = sess.get(selectHotel_url)
+                logger.info("=== Outgoing Request ===")
+                logger.info(f"{prepared.method} {prepared.url}")
+                for k, v in prepared.headers.items():
+                    logger.info(f"{k}: {v}")
+
+                selectHotel_response = sess.send(prepared)
+                logger.info(f"selectHotel_response cookie :: {selectHotel_response.cookies.get_dict()}")
+
+                # selectHotel_response = sess.get(selectHotel_url)
                 ref_url = selectHotel_response.url
                 logger.info(f"Redirected to Hotel :: {selectHotel_response.status_code} {ref_url}")
+                logger.info(f"Redirected to Hotel Response:: {(selectHotel_response.text)[:150]}")
 
                 if selectHotel_response.status_code >= 400:
                     logger.warning("Cookies rejected at hotel selection.")
@@ -374,9 +386,9 @@ class ExtractHyatt:
 if __name__ == "__main__":
     crawl = ExtractHyatt()
     data = crawl.get_search_data(
-        hotel_id="yvrrv-Hyatt Regency Vancouver",
-        check_in_date="2025-12-20",
-        check_out_date="2025-12-24",
+        hotel_id="m1552-Santarena Hotel at Las Catalinas",
+        check_in_date="2026-02-05",
+        check_out_date="2026-02-08",
         guest_count=1,
         # hotel_id="m0207-Kinsterna Hotel",
         # check_in_date="2025-12-21",
