@@ -45,16 +45,9 @@ class ExtractHyatt:
         while waited < timeout:
             cookies = context.cookies()
             for cookie in cookies:
-                if (cookie["name"] == "source-country"
-                        or cookie["name"] == "source-region"
-                        or cookie["name"] == "AKA_A2"
-                        or cookie["name"] == "tkrm_alpekz_s1.3-ssn"
-                        or cookie["name"] == "tkrm_alpekz_s1.3"
-                        or cookie["name"] == "KP_REF"
-                        or cookie["name"] == "KP_IM") :
-                    if cookie["name"].startswith("tkrm_alpekz_s1.3"):
-                        logger.info(f"Required cookies found: {cookie['name']}")
-                        return cookies
+                if cookie["name"].startswith("tkrm_alpekz_s1.3"):
+                    logger.info(f"Required cookies found: {cookie['name']}")
+                    return cookies
             time.sleep(poll_interval)
             waited += poll_interval
         return context.cookies()
@@ -106,8 +99,8 @@ class ExtractHyatt:
         logger.info("Setting up crawler to extract data")
 
         browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        while browser_family != "chromium":
-            browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        # while browser_family != "chromium":
+        #     browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
         _headers = headers
         _headers["cache-control"] = "no-cache"
 
@@ -171,28 +164,13 @@ class ExtractHyatt:
                     proxies_requests = {"http": _proxy_url, "https": _proxy_url}
                     sess.proxies.update(proxies_requests)
                     sess.headers.update(_headers)
-
-                    # cookie_map = {c["name"]: c["value"] for c in cookies}
-                    # extra = {
-                    #     "newvisit": "true",
-                    #     "email_90_10": "control",
-                    #     "t_rnr_tab_capture": "",
-                    #     "scPrevPage": "Global:LandingPage",
-                    #     "s_p26": "en-US"
-                    # }
-                    # cookie_map.update(extra)
-                    # add_dict_to_cookiejar(sess.cookies, cookie_map)
-
-                    add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
-                    # for cookie in cookies:
-                    #     sess.cookies.set(
-                    #         cookie["name"],
-                    #         cookie["value"],
-                    #         domain=cookie.get("domain", ""),
-                    #         path=cookie.get("path", "/"),
-                    #     )
-
-                    logger.info(f"Cookies added to cookiejar....{sess.cookies}")
+                    for cookie in cookies:
+                        sess.cookies.set(
+                            cookie["name"],
+                            cookie["value"],
+                            domain=cookie.get("domain", ""),
+                            path=cookie.get("path", "/"),
+                        )
 
                     return sess
 
@@ -230,29 +208,12 @@ class ExtractHyatt:
                 proxies_requests = {"http": _proxy_url, "https": _proxy_url}
                 sess.proxies.update(proxies_requests)
                 browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-                while browser_family != "chromium":
-                    browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                # while browser_family != "chromium":
+                #     browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
                 _headers = headers
                 _headers["cache-control"] = "no-cache"
                 sess.headers.update(_headers)
-                # cookie_map = {c["name"]: c["value"] for c in cookies}
-                # extra = {
-                #     "newvisit": "true",
-                #     "email_90_10": "control",
-                #     "t_rnr_tab_capture": "",
-                #     "scPrevPage": "Global:LandingPage",
-                #     "s_p26": "en-US"
-                # }
-                # cookie_map.update(extra)
-                # add_dict_to_cookiejar(sess.cookies, cookie_map)
                 add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
-                # for cookie in cookies:
-                #     sess.cookies.set(
-                #         cookie["name"],
-                #         cookie["value"],
-                #         domain=cookie.get("domain", ""),
-                #         path=cookie.get("path", "/"),
-                #     )
 
             elif sess is None:
                 sess = requests.Session()
@@ -260,105 +221,78 @@ class ExtractHyatt:
                 proxies_requests = {"http": _proxy_url, "https": _proxy_url}
                 sess.proxies.update(proxies_requests)
                 browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-                while browser_family != "chromium":
-                    browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+                # while browser_family != "chromium":
+                #     browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
                 _headers = headers
                 _headers["cache-control"] = "no-cache"
                 sess.headers.update(_headers)
-                # cookie_map = {c["name"]: c["value"] for c in cookies}
-                # extra = {
-                #     "newvisit": "true",
-                #     "email_90_10": "control",
-                #     "t_rnr_tab_capture": "",
-                #     "scPrevPage": "Global:LandingPage",
-                #     "s_p26": "en-US"
-                # }
-                # cookie_map.update(extra)
-                # add_dict_to_cookiejar(sess.cookies, cookie_map)
                 add_dict_to_cookiejar(sess.cookies, {c["name"]: c["value"] for c in cookies})
-                # for cookie in cookies:
-                #     sess.cookies.set(
-                #         cookie["name"],
-                #         cookie["value"],
-                #         domain=cookie.get("domain", ""),
-                #         path=cookie.get("path", "/"),
-                #     )
 
             try:
-                # suggestion_url = (
-                #     f"https://www.hyatt.com/quickbook/autocomplete?"
-                #     f"query={encoded_hotel_name.replace('%2F', '/')}&locale=en-US&includeGoogleSuggestions=true"
-                # )
-                #
-                # logger.info(f"[Attempt {attempt + 1}] Suggestion API: {suggestion_url}")
-                # sess.headers.update({
-                #     'x-requested-with': 'XMLHttpRequest',
-                #     # 'user-agent': self._headers["user-agent"],
-                #     'accept': 'application/json, text/javascript, */*; q=0.01',
-                #     'sec-fetch-site': 'same-origin',
-                #     'sec-fetch-mode': 'cors',
-                #     'sec-fetch-dest': 'empty',
-                #     'referer': 'https://www.hyatt.com/',
-                #     'accept-language': 'en-US,en;q=0.9',
-                #     "accept-encoding": "gzip, deflate"
-                # })
-                #
-                # suggestion_response = sess.get(suggestion_url)
-                # logger.info(f"suggestion_response :: {(suggestion_response.text)[:100]}")
-                # if suggestion_response.status_code == 401:
-                #     logger.warning("Cookies rejected at suggestion API.")
-                #     if attempt + 1 < max_retries:
-                #         sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
-                #         continue
-                #     else:
-                #         return self.build_response(success=False, data=suggestion_response.text, status_code=suggestion_response.status_code)
-                #
-                # selectHotel_url = (
-                #     f"https://www.hyatt.com/HyattSearch?locale=en-US&spiritCode={hotel_id}"
-                #     f"&newAutocomplete=&location={encoded_hotel_name.replace('%20', '+')}"
-                #     f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
-                #     f"&rooms=1&adults={guest_count}&kids=0&rate=Standard"
-                #     f"&offercode=&corp_id=&rateFilter=woh"
-                #     f"&searchFilters=locale%3Den-US%26spiritCodes%3D{hotel_id}&externalBookingURL="
-                # )
-                #
-                # logger.info(f"Selecting Hotel :: {selectHotel_url}")
-                # sess.headers.pop("x-requested-with", None)
-                # sess.headers.update({
-                #     'upgrade-insecure-requests': '1',
-                #     # 'user-agent': self._headers["user-agent"],
-                #     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                #     'sec-fetch-site': 'same-origin',
-                #     'sec-fetch-mode': 'navigate',
-                #     'sec-fetch-user': '?1',
-                #     'sec-fetch-dest': 'document',
-                #     'referer': 'https://www.hyatt.com/',
-                #     'accept-language': 'en-US,en;q=0.9',
-                #     "accept-encoding": "gzip, deflate"
-                # })
-                # req = requests.Request("GET", selectHotel_url)
-                # prepared = sess.prepare_request(req)
-                #
-                # logger.info("=== Outgoing Request ===")
-                # logger.info(f"{prepared.method} {prepared.url}")
-                # for k, v in prepared.headers.items():
-                #     logger.info(f"{k}: {v}")
-                #
-                # selectHotel_response = sess.send(prepared)
-                # logger.info(f"selectHotel_response cookie :: {selectHotel_response.cookies.get_dict()}")
-                #
-                # # selectHotel_response = sess.get(selectHotel_url)
-                # ref_url = selectHotel_response.url
-                # logger.info(f"Redirected to Hotel :: {selectHotel_response.status_code} {ref_url}")
-                # logger.info(f"Redirected to Hotel Response:: {(selectHotel_response.text)[:150]}")
-                #
-                # if selectHotel_response.status_code >= 400:
-                #     logger.warning("Cookies rejected at hotel selection.")
-                #     if attempt + 1 < max_retries:
-                #         sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
-                #         continue
-                #     else:
-                #         return self.build_response(success=False, data=selectHotel_response.text, status_code=selectHotel_response.status_code)
+                suggestion_url = (
+                    f"https://www.hyatt.com/quickbook/autocomplete?"
+                    f"query={encoded_hotel_name.replace('%2F', '/')}&locale=en-US&includeGoogleSuggestions=true"
+                )
+
+                logger.info(f"[Attempt {attempt + 1}] Suggestion API: {suggestion_url}")
+                sess.headers.update({
+                    'x-requested-with': 'XMLHttpRequest',
+                    # 'user-agent': self._headers["user-agent"],
+                    'accept': 'application/json, text/javascript, */*; q=0.01',
+                    'sec-fetch-site': 'same-origin',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-dest': 'empty',
+                    'referer': 'https://www.hyatt.com/',
+                    'accept-language': 'en-US,en;q=0.9',
+                    "accept-encoding": "gzip, deflate"
+                })
+
+                suggestion_response = sess.get(suggestion_url)
+                logger.info(f"suggestion_response :: {(suggestion_response.text)[:100]}")
+                if suggestion_response.status_code >= 400:
+                    logger.warning("Cookies rejected at suggestion API.")
+                    if attempt + 1 < max_retries:
+                        sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
+                        continue
+                    else:
+                        return self.build_response(success=False, data=suggestion_response.text, status_code=suggestion_response.status_code)
+
+                selectHotel_url = (
+                    f"https://www.hyatt.com/HyattSearch?locale=en-US&spiritCode={hotel_id}"
+                    f"&newAutocomplete=&location={encoded_hotel_name.replace('%20', '+')}"
+                    f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
+                    f"&rooms=1&adults={guest_count}&kids=0&rate=Standard"
+                    f"&offercode=&corp_id=&rateFilter=woh"
+                    f"&searchFilters=locale%3Den-US%26spiritCodes%3D{hotel_id}&externalBookingURL="
+                )
+
+                logger.info(f"Selecting Hotel :: {selectHotel_url}")
+                sess.headers.pop("x-requested-with", None)
+                sess.headers.update({
+                    'upgrade-insecure-requests': '1',
+                    # 'user-agent': self._headers["user-agent"],
+                    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                    'sec-fetch-site': 'same-origin',
+                    'sec-fetch-mode': 'navigate',
+                    'sec-fetch-user': '?1',
+                    'sec-fetch-dest': 'document',
+                    'referer': 'https://www.hyatt.com/',
+                    'accept-language': 'en-US,en;q=0.9',
+                    "accept-encoding": "gzip, deflate"
+                })
+
+                selectHotel_response = sess.get(selectHotel_url)
+                ref_url = selectHotel_response.url
+                logger.info(f"Redirected to Hotel :: {selectHotel_response.status_code} {ref_url}")
+                logger.info(f"Redirected to Hotel Response:: {(selectHotel_response.text)[:150]}")
+
+                if selectHotel_response.status_code >= 400:
+                    logger.warning("Cookies rejected at hotel selection.")
+                    if attempt + 1 < max_retries:
+                        sess = self.get_freshSession(hotel_id, check_in_date, check_out_date, guest_count)
+                        continue
+                    else:
+                        return self.build_response(success=False, data=selectHotel_response.text, status_code=selectHotel_response.status_code)
 
                 # Roomrate API
                 url = (
@@ -369,38 +303,24 @@ class ExtractHyatt:
                     f"&kids=0&rate=Standard&suiteUpgrade=true"
                 )
                 logger.info(f"Roomrate API: {url}")
-                ref_url = f"https://www.hyatt.com/shop/rooms/{hotel_id}?location={encoded_hotel_name}&checkinDate={check_in_date}&checkoutDate={check_out_date}&rooms=1&adults={guest_count}&kids=0&rate=Standard&rateFilter=woh"
-                logger.info(f"ref_url: {ref_url}")
-                sess.headers.pop("upgrade-insecure-requests", None)
                 sess.headers.pop("sec-fetch-user", None)
-                sess.headers.pop("Connection", None)
                 sess.headers.pop("cache-control", None)
+                sess.headers.pop("upgrade-insecure-requests", None)
                 sess.headers.update({
+                    "cache-control": "max-age=0",
+                    # "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
                     "accept": "*/*",
-                    "accept-language": "en-US,en;q=0.9",
-                    "referer": ref_url,
-                    # "user-agent": self._headers["user-agent"],
-                    "sec-fetch-dest": "empty",
-                    "sec-fetch-mode": "cors",
                     "sec-fetch-site": "same-origin",
-                    # "accept-encoding": "gzip, deflate"
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-dest": "empty",
+                    "referer": ref_url,
+                    "accept-encoding": "gzip, deflate, br, zstd",
+                    "accept-language": "en-US,en;q=0.9"
                 })
 
-                req = requests.Request("GET", url)
-                prepared = sess.prepare_request(req)
-
-                logger.info("=== Outgoing Request ===")
-                logger.info(f"{prepared.method} {prepared.url}")
-                for k, v in prepared.headers.items():
-                    logger.info(f"{k}: {v}")
-
-                response = sess.send(prepared)
-
-                # response = sess.get(url)
+                response = sess.get(url)
                 data_json = None
                 decodedResponse = response.text
-
-                logger.info(f"decodedResponse :: {decodedResponse}")
 
                 if response.status_code == 200 and response.headers.get("Content-Encoding") == "br":
                     try:
