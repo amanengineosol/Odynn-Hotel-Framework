@@ -3,7 +3,7 @@ import logging
 import random as rand
 import time
 from datetime import datetime
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from urllib.parse import urlparse, quote
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
@@ -43,11 +43,12 @@ class ExtractHyatt:
             return self.build_response(success=False, data=message, status_code=101)
 
         parsed = urlparse(_proxy_url)
-        proxy = {
-            "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
-            "username": parsed.username,
-            "password": parsed.password,
-        }
+        if parsed.username and parsed.password:
+            proxy = {
+                "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
+                "username": parsed.username,
+                "password": parsed.password,
+            }
 
         logger.info("Proxy url dict created for request")
         logger.info("Setting up crawler to extract data")
@@ -106,31 +107,41 @@ class ExtractHyatt:
                     page = context.new_page()
                     page.set_default_timeout(100000)
 
-                    page.goto("https://www.hyatt.com/", wait_until="load", timeout=120000)
-                    human_delay(6, 12)
+                    for attempt in range(1, max_retries + 1):
+                        try:
+                            page.goto("https://www.hyatt.com/", wait_until="load", timeout=120000)
+                            human_delay(6, 12)
 
-                    page.locator('input[data-id="location"]').wait_for(timeout=120000)
-                    page.get_by_role("button", name="Find Hotels")
+                            page.locator('input[data-id="location"]').wait_for(timeout=120000)
+                            page.get_by_role("button", name="Find Hotels")
 
-                    logger.info("Home page request completed successfully.....")
+                            logger.info("Home page request completed successfully.....")
 
-                    # ---- Mouse movement ----
-                    logger.info("Sleeping for few seconds for mouse movement.....")
-                    human_delay(2, 5)
-                    page.mouse.move(rand.randint(0, 2), rand.randint(3, 8))
-                    page.mouse.down()
-                    page.mouse.move(0, rand.randint(100, 120))
-                    page.mouse.move(rand.randint(100, 120), rand.randint(100, 120))
-                    page.mouse.move(rand.randint(100, 120), 0)
-                    page.mouse.move(0, 0)
-                    page.mouse.up()
+                            # ---- Mouse movement ----
+                            logger.info("Sleeping for few seconds for mouse movement.....")
+                            human_delay(2, 5)
+                            page.mouse.move(rand.randint(0, 2), rand.randint(3, 8))
+                            page.mouse.down()
+                            page.mouse.move(0, rand.randint(100, 120))
+                            page.mouse.move(rand.randint(100, 120), rand.randint(100, 120))
+                            page.mouse.move(rand.randint(100, 120), 0)
+                            page.mouse.move(0, 0)
+                            page.mouse.up()
 
-                    page.keyboard.press("PageDown")
-                    human_delay(1, 3)
-                    page.keyboard.press("PageUp")
-                    human_delay(2, 4)
+                            page.keyboard.press("PageDown")
+                            human_delay(1, 3)
+                            page.keyboard.press("PageUp")
+                            human_delay(2, 4)
 
-                    logger.info("Mouse movement completed.....")
+                            logger.info("Mouse movement completed.....")
+                            break
+
+                        except PlaywrightTimeoutError as pwex:
+                            logger.warning(f"Attempt {attempt} failed: {pwex}")
+                            if attempt < max_retries:
+                                time.sleep(2)
+                            else:
+                                return self.build_response(success=False, data={"details": f"Failed after retries: {pwex}"}, status_code=103)
 
                     # ---- Room rates API calls ----
                     url = (
@@ -154,6 +165,7 @@ class ExtractHyatt:
                         }
                         return self.build_response(success=True, data=message, status_code=response.status)
 
+                    data_json = None
                     if response.status == 200 and decodedResponse:
                         try:
                             data_json = json.loads(decodedResponse)
