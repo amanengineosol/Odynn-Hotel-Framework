@@ -156,8 +156,35 @@ class ExtractHyatt:
 
                     response = page.goto(url)
                     page.wait_for_load_state("load")
+                    logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
+                    logger.info(f"Final Page Content Data: {response.text()[:200]}")
 
                     decodedResponse = response.text()
+                    if decodedResponse is None and response.status == 200:
+                        url = (
+                            f"https://www.hyatt.com/shop/service/rooms/roomrates/{hotel_id}"
+                            f"?spiritCode={hotel_id}&rooms=1&adults={guest_count}"
+                            f"&location={encoded_hotel_name}"
+                            f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
+                            f"&kids=0&rate=Standard&suiteUpgrade=true"
+                        )
+
+                        logger.info(f"Navigating to roomrate API Again:: {url}")
+
+                        response = page.goto(url)
+                        page.wait_for_load_state("load")
+                        logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
+                        logger.info(f"Final Page Content Data: {response.text()[:200]}")
+                        decodedResponse = response.text()
+                        if decodedResponse is None and response.status == 200:
+                            response.status = 429
+                            message = {
+                                "details": f"Blank page occurred {response.status}"
+                            }
+                            return self.build_response(success=False, data=message, status_code=response.status)
+
+
+
                     if '"invalidSpiritCode"' in decodedResponse:
                         logging.error("Property Code is invalid.")
                         message = {
@@ -213,9 +240,9 @@ class ExtractHyatt:
 if __name__ == "__main__":
     crawl = ExtractHyatt()
     data = crawl.get_search_data(
-        hotel_id="m1552-Santarena Hotel at Las Catalinas",
-        check_in_date="2026-02-05",
-        check_out_date="2026-02-08",
+        hotel_id="yulzm-Hyatt Place Montreal - Downtown",
+        check_in_date="2026-01-28",
+        check_out_date="2026-01-29",
         guest_count=1,
         # hotel_id="m0207-Kinsterna Hotel",
         # check_in_date="2025-12-21",
