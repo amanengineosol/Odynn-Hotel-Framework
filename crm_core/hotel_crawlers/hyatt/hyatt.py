@@ -160,7 +160,7 @@ class ExtractHyatt:
                     logger.info(f"Final Page Content Data: {response.text()[:200]}")
 
                     decodedResponse = response.text()
-                    if decodedResponse is None and response.status == 200:
+                    if decodedResponse is "" and response.status == 200:
                         url = (
                             f"https://www.hyatt.com/shop/service/rooms/roomrates/{hotel_id}"
                             f"?spiritCode={hotel_id}&rooms=1&adults={guest_count}"
@@ -176,7 +176,7 @@ class ExtractHyatt:
                         logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
                         logger.info(f"Final Page Content Data: {response.text()[:200]}")
                         decodedResponse = response.text()
-                        if decodedResponse is None and response.status == 200:
+                        if decodedResponse is "" and response.status == 200:
                             response.status = 429
                             message = {
                                 "details": f"Blank page occurred {response.status}"
