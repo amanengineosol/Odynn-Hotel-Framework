@@ -144,7 +144,11 @@ class ExtractHyatt:
                                 return self.build_response(success=False, data={"details": f"Failed after retries: {pwex}"}, status_code=103)
 
                     # ---- Room rates API calls ----
-                    url = (
+                    context.add_cookies([{"name": "rate_filter", "value": "woh", "domain": "hyatt.com", "path": "/"}])
+                    cookies = context.cookies()
+                    cookie_header = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+
+                    api_url = (
                         f"https://www.hyatt.com/shop/service/rooms/roomrates/{hotel_id}"
                         f"?spiritCode={hotel_id}&rooms=1&adults={guest_count}"
                         f"&location={encoded_hotel_name}"
@@ -152,36 +156,53 @@ class ExtractHyatt:
                         f"&kids=0&rate=Standard&suiteUpgrade=true"
                     )
 
-                    logger.info(f"Navigating to roomrate API:: {url}")
+                    ref_url = f"https://www.hyatt.com/shop/rooms/{hotel_id}?location={encoded_hotel_name}&checkinDate={check_in_date}&checkoutDate={check_out_date}&rooms=1&adults={guest_count}&kids=0&rate=Standard&rateFilter=woh"
 
-                    response = page.goto(url)
-                    page.wait_for_load_state("load")
+                    api_headers = {
+                        'host': 'www.hyatt.com',
+                        'sec-ch-ua-platform': _headers["sec-ch-ua-platform"],
+                        'user-agent': _headers["user-agent"],
+                        'sec-ch-ua': _headers["sec-ch-ua"],
+                        'sec-ch-ua-mobile': _headers["sec-ch-ua-mobile"],
+                        'accept': '*/*',
+                        'sec-fetch-site': 'same-origin',
+                        'sec-fetch-mode': 'cors',
+                        'sec-fetch-dest': 'empty',
+                        'referer': ref_url,
+                        'accept-encoding': 'gzip, deflate, br, zstd',
+                        # 'accept-language': 'en-US,en;q=0.9'
+                        'cookie': cookie_header
+                    }
+
+                    logger.info(f"Navigating to roomrate API with reference, headers:: {api_url} :: {ref_url} :: {api_headers}")
+
+                    response = page.request.get(url=api_url, headers=api_headers)
+
                     logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
                     logger.info(f"Final Page Content Data: {response.text()[:200]}")
 
                     decodedResponse = response.text()
-                    if decodedResponse is "" and response.status == 200:
-                        url = (
-                            f"https://www.hyatt.com/shop/service/rooms/roomrates/{hotel_id}"
-                            f"?spiritCode={hotel_id}&rooms=1&adults={guest_count}"
-                            f"&location={encoded_hotel_name}"
-                            f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
-                            f"&kids=0&rate=Standard&suiteUpgrade=true"
-                        )
+                    if decodedResponse == "":
+                    # if decodedResponse == "" and response.status == 200:
+                        logger.info(f"Navigating to roomrate API Again with reference, headers:: {api_url} :: {ref_url} :: {api_headers}")
 
-                        logger.info(f"Navigating to roomrate API Again:: {url}")
+                        response = page.request.get(url=api_url, headers=api_headers)
 
-                        response = page.goto(url)
-                        page.wait_for_load_state("load")
                         logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
                         logger.info(f"Final Page Content Data: {response.text()[:200]}")
                         decodedResponse = response.text()
-                        if decodedResponse is "" and response.status == 200:
-                            response.status = 429
+                        if decodedResponse == "" and response.status == 200:
+                            status = 429
+                            message = {
+                                "details": f"Blank page occurred {status}"
+                            }
+                            return self.build_response(success=False, data=message, status_code=status)
+                        elif decodedResponse == "":
                             message = {
                                 "details": f"Blank page occurred {response.status}"
                             }
                             return self.build_response(success=False, data=message, status_code=response.status)
+
 
 
 
