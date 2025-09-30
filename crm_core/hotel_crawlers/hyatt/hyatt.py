@@ -57,7 +57,6 @@ class ExtractHyatt:
         # while browser_family != "chromium":
         #     browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
         _headers = headers
-        _headers["cache-control"] = "no-cache"
 
         # Validate inputs
         check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
@@ -170,6 +169,7 @@ class ExtractHyatt:
                         'sec-fetch-dest': 'empty',
                         'referer': ref_url,
                         'accept-encoding': 'gzip, deflate, br, zstd',
+                        'priority': 'u=1, i',
                         # 'accept-language': 'en-US,en;q=0.9'
                         'cookie': cookie_header
                     }
