@@ -26,7 +26,7 @@ CELERY_RESULT_BACKEND = None
 CELERY_RESULT_EXPIRES = 300
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Kolkata'
+# CELERY_TIMEZONE = 'Asia/Kolkata'
 enable_utc = False
 
 # Additional production settings like SSL, security middleware configs, etc.

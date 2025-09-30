@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 PROXY_PROVIDER_ENDPOINT=os.getenv('PROXY_PROVIDER_ENDPOINT')
 X_API_TOKEN=os.getenv('X_API_TOKEN')
-PROXY_PROVIDER = ['proxyrack','privateproxy', 'smartproxy']
+PROXY_PROVIDER = ['proxyrack','privateproxy']
 
 def _build_proxy_url(conn):
     if conn:

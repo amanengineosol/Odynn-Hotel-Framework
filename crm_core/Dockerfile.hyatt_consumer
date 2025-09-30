@@ -22,8 +22,8 @@ COPY ../crm_core/dev_requirements.txt /app/requirements.txt
 # Install python dependencies
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt && \
-    playwright install && \
-    playwright install-deps
+    playwright install chromium && \
+    playwright install-deps chromium
 
 
 # Copy application code

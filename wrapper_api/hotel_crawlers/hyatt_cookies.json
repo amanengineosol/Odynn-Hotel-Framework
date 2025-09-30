@@ -1,0 +1,182 @@
+[
+    {
+        "name": "source-country",
+        "value": "BY",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "source-region",
+        "value": "",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "AKA_A2",
+        "value": "A",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1758891352.933476,
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mb_locale",
+        "value": "en-US",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1761479758.259472,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "mboxEdgeCluster",
+        "value": "34",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1758889626,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "vrid",
+        "value": "6196a30a-fc6b-430e-8e81-b9410f8e2004",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1793447758.259732,
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "f5avraaaaaaaaaaaaaaaa_session_",
+        "value": "AECMLGAFANOEMPPKHDFNMLILOOICDBEPMEENEMDKFIPJMPEAGDHGEBKIJOOOJBJIKEEDEGKIBPBLNKAJANCACLMFAHJJEONFLKBLKAAHOENIMIKHDJOOBCMNHOIEDLON",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "at_check",
+        "value": "true",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "tkrm_alpekz_s1.3-ssn",
+        "value": "0djt0rNu2prZQo4ytMLmPOYLghF56g8OKNWKC1HXLyEvhwXkY2RJyQaJcQHMcffVqf5Bbuu5jHrHR9xqmnl6FhMmtXcgJaMcQNXb9jXNQuvhW94SJLFfQjnCnT1nY5aP7qpd1l5NpFtlzlYhKcyQTKwJHNsW8CbsjfLoZga4gxoeOuz",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": 1758974160.674577,
+        "httpOnly": true,
+        "secure": true,
+        "sameSite": "None"
+    },
+    {
+        "name": "tkrm_alpekz_s1.3",
+        "value": "0djt0rNu2prZQo4ytMLmPOYLghF56g8OKNWKC1HXLyEvhwXkY2RJyQaJcQHMcffVqf5Bbuu5jHrHR9xqmnl6FhMmtXcgJaMcQNXb9jXNQuvhW94SJLFfQjnCnT1nY5aP7qpd1l5NpFtlzlYhKcyQTKwJHNsW8CbsjfLoZga4gxoeOuz",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": 1758974160.674786,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "RT",
+        "value": "\"z=1&dm=hyatt.com&si=tigl0thme8&ss=mg0scwwb&sl=0&tt=0\"",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1759492561,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "demdex",
+        "value": "52285197958947323502245252684828640144",
+        "domain": ".demdex.net",
+        "path": "/",
+        "expires": 1774439762.843621,
+        "httpOnly": false,
+        "secure": true,
+        "sameSite": "None"
+    },
+    {
+        "name": "AMCVS_D7B27FF452128BAA0A490D4C%40AdobeOrg",
+        "value": "1",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "cnry-hf1l5dj2aY",
+        "value": "1313f0e99f4b7110",
+        "domain": "www.hyatt.com",
+        "path": "/",
+        "expires": -1,
+        "httpOnly": true,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "AMCV_D7B27FF452128BAA0A490D4C%40AdobeOrg",
+        "value": "179643557%7CMCIDTS%7C20358%7CMCMID%7C46876745251463781721633158781425429010%7CMCAAMLH-1759492562%7C6%7CMCAAMB-1759492562%7C6G1ynYcLPuiQxYZrsz_pkqfLG9yMXBpb2zX5dvJdYQJzPXImdj0y%7CMCOPTOUT-1758894962s%7CNONE%7CMCAID%7CNONE%7CvVersion%7C5.5.0",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1793447764.84008,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "dextp",
+        "value": "358-1-1758887764656|771-1-1758887764772|73426-1-1758887764880",
+        "domain": ".demdex.net",
+        "path": "/",
+        "expires": 1774439764,
+        "httpOnly": false,
+        "secure": true,
+        "sameSite": "None"
+    },
+    {
+        "name": "mbox",
+        "value": "session#b60c3809f3f540259f2d340805067d09#1758889627|PC#111758887756918-15828.34_0#1822132567",
+        "domain": ".hyatt.com",
+        "path": "/",
+        "expires": 1793447766.134177,
+        "httpOnly": false,
+        "secure": false,
+        "sameSite": "Lax"
+    },
+    {
+        "name": "everest_g_v2",
+        "value": "g_surferid~aNZ-VgAAAEhzkgNn",
+        "domain": ".everesttech.net",
+        "path": "/",
+        "expires": 1790423767.854381,
+        "httpOnly": false,
+        "secure": true,
+        "sameSite": "None"
+    }
+]

@@ -1,13 +1,13 @@
 from celery import shared_task
-from .crawler_dispatcher import CRAWLER_FETCH_RESPONSE_MAP
-from crm_core.redis.cache_processor import CrawlerRedisClient
-from crm_core.mongo_db_service import save_request_response_to_db
-from .utility.response_body import response_obj
+from crawler_dispatcher import CRAWLER_FETCH_RESPONSE_MAP
+from cache_processor import CrawlerRedisClient
+from mongo_db_service import save_request_response_to_db
+from response_body import response_obj
+
 import logging
 logger = logging.getLogger(__name__)
 
 redis_client= CrawlerRedisClient(0)
-
 
 @shared_task(name='crm_core.task.process_live_request', rate_limit="40/m")
 def process_live_request(request_data):
@@ -20,7 +20,7 @@ def process_live_request(request_data):
     check_out_date = parameter.get("check_out_date")
     guest_count = parameter.get("guest_count", 1)
     fetch_response_func = CRAWLER_FETCH_RESPONSE_MAP.get(crawler_name)
-    key = redis_client.build_key(crawler_name, parameter, "hotel")
+    key = redis_client.build_key(crawler_name, parameter)
 
     if not fetch_response_func:
         logger.error(f"No fetch function mapped for crawler: {crawler_name}")
@@ -46,7 +46,7 @@ def process_live_request(request_data):
                 logger.info(f"Response saved to DB for request: {request_data.get('request_id')}")
                 redis_client.set_crawler_response(key, response_obj, expiration=10800)
                 logger.info(f"Response cached in Redis for key: {key}")
-                return 
+                return
             logger.warning(f"Non-200 crawler response for {crawler_name}")
             response_obj.update({
                     'data': None,
@@ -57,7 +57,7 @@ def process_live_request(request_data):
             logger.info(f"Saving error response and caching for request: {request_data.get('request_id')}")
             save_request_response_to_db(request_data, response_obj)
             redis_client.set_crawler_response(key, response_obj, expiration=4)
-            return 
+            return
 
         except Exception as e:
             logger.error(f"Exception during fetch crawler response {crawler_name}: {e}")
