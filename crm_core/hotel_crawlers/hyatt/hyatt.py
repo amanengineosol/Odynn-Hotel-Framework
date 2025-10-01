@@ -235,8 +235,15 @@ class ExtractHyatt:
                     else:
                         logger.error(f"Roomrate API failed with status {response.status}")
                         message = {
-                            "details": f"Roomrate API failed with status {response.status}"
+                            "details": f"Unknown Error{response.text()} with status: {response.status}"
                         }
+                        if response.status == 522:
+                            message = {
+                                "details": f"Hyatt connection Error {response.text()}with status: {response.status}"
+                            }
+
+
+
                         return self.build_response(success=False, data=message, status_code=response.status)
 
                 except Exception as ex:
