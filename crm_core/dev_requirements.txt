@@ -12,3 +12,4 @@ psycopg2-binary
 gunicorn
 playwright
 brotlipy
+curl_cffi

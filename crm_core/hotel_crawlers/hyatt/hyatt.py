@@ -79,14 +79,22 @@ class ExtractHyatt:
                     headless=True,
                     proxy=proxy,
                     args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--start-maximized",
-                        "--disable-dev-shm-usage",
-                        "--no-sandbox",
-                        "--disable-gpu",
-                        "--disable-infobars",
-                        "--ignore-certificate-errors",
-                        "--enable-features=NetworkService,NetworkServiceInProcess"
+                        '--no-first-run',
+                        '--no-default-browser-check',
+                        '--disable-blink-features=AutomationControlled',
+                        '--disable-http2',
+                        '--disable-web-security',
+                        '--disable-3d-apis',
+                        '--disable-webrtc-encryption',
+                        '--disable-features=WebRtcHideLocalIpsWithMdns',
+                        '--disable-features=VizDisplayCompositor',
+                        '--disable-dev-shm-usage',
+                        '--no-sandbox',
+                        '--disable-setuid-sandbox',
+                        '--disable-background-timer-throttling',
+                        '--disable-backgrounding-occluded-windows',
+                        '--disable-renderer-backgrounding'
+
                     ],
                 )
                 try:
