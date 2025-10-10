@@ -134,7 +134,7 @@ async def hotel_wrapper(request_body: HotelRequest):
                     "crawler_response": cache_resp
                 }
                 logger.info(f"Poll succeeded with cache key {cache_key}")
-                return JSONResponse(content=combined, status_code=200)
+                return JSONResponse(content=combined, status_code=cache_resp.get('status_code', 200))
             await asyncio.sleep(interval)
             waited += interval
 

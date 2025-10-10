@@ -4,6 +4,7 @@ from crm_core.redis.cache_processor import CrawlerRedisClient
 from crm_core.mongo_db_service import save_request_response_to_db
 from .utility.response_body import response_obj
 import logging
+import asyncio
 logger = logging.getLogger(__name__)
 
 redis_client= CrawlerRedisClient(0)
@@ -33,7 +34,10 @@ def process_live_request(request_data):
         return
     else:
         try:
-            response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
+            async def fetch_data():
+                return await fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
+            # response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
+            response = asyncio.run(fetch_data())
             if response['status_code'] == 200:
                 logger.info(f"Successful got response from crawler: {crawler_name} for request: {request_data.get('request_id')}")
                 response_obj.update({
