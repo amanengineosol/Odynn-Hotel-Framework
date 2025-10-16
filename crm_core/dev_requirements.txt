@@ -11,5 +11,6 @@ requests
 psycopg2-binary
 gunicorn
 playwright
-brotlipy
-curl_cffi
+pydoll-python
+aiohttp
+brotli

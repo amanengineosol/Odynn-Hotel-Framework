@@ -120,7 +120,7 @@ class ExtractMarriott:
                     return ("Error Occured.")
 
                 # ---------- 3: JS page ----------
-                url = "https://www.marriott.com/etc.clientlibs/mcom-hws/clientlibs/clientlib-sitev2.min.25dfc6cf6a8b94135a28f9b03e6ed02d.js"
+                url = "https://www.marriott.com/etc.clientlibs/mcom-hws/clientlibs/clientlib-sitev2.min.6ad258637c239cff460e0f2a987c0e8d.js"
                 headers = {
                     'accept': '*/*',
                     'sec-fetch-site': 'same-origin',

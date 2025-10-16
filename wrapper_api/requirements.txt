@@ -17,3 +17,4 @@ flower
 pymongo
 dnspython
 requests
+aiohttp

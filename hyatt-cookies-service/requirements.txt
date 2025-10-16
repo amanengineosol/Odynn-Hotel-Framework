@@ -1,0 +1,6 @@
+aioredis
+playwright
+patchright
+redis
+requests
+python-dotenv

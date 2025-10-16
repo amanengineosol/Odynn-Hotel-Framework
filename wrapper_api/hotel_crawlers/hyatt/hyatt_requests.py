@@ -1,8 +1,9 @@
 from urllib.parse import quote
+
 import aiohttp
 import asyncio
-from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
-from .random_cookie_getter import CrawlerRedisClient
+from random_user_agent import get_random_sec_ch_headers, USER_AGENT
+from random_cookie_getter import CrawlerRedisClient
 
 class HyattExtractor:
     def __init__(self):
@@ -43,7 +44,7 @@ class HyattExtractor:
 
         async with self.session.get(url, headers=req_headers) as response:
             print(f"Status: {response.status}")
-            data = await response.json(content_type=None)
+            data = await response.json(content_type=None)  # Hyatt might send `text/json` or no header
             print(data)
             return data
 
@@ -53,15 +54,15 @@ class HyattExtractor:
 
 
 # --------------- Run Example -----------------
-# async def main():
-#     hyatt = HyattExtractor()
-#     await hyatt.get_search_data(
-#         check_in_date="2026-01-10",
-#         check_out_date="2026-01-12",
-#         hotel_id="yvrrv",
-#         hotel_name="Hyatt Regency Vancouver"
-#     )
-#     await hyatt.close()
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())
+async def main():
+    hyatt = HyattExtractor()
+    await hyatt.get_search_data(
+        check_in_date="2026-01-10",
+        check_out_date="2026-01-12",
+        hotel_id="yvrrv",
+        hotel_name="Hyatt Regency Vancouver"
+    )
+    await hyatt.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())

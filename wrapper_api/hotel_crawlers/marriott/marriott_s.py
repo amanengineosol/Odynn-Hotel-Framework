@@ -1,373 +1,315 @@
+import json
+import logging
+import random as rand
+import time
+from datetime import datetime
+from playwright.sync_api import sync_playwright , TimeoutError as PlaywrightTimeoutError
+from urllib.parse import urlparse, quote
 from .proxy_manager import ProxyManager
-from datetime import datetime, timedelta
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
 import requests
-import json
-import re
-import logging
-import time
-from requests.exceptions import ProxyError, ConnectionError, Timeout, HTTPError
-from datetime import datetime, timedelta
 
+# ---------------- Log configuration ----------------
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("marriott.log"),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 
-def handle_response_status(response, context=""):
-    status = response.status_code
-    if 200 <= status < 300:
-        logger.info(f"{context} - Success: HTTP {status}")
-        return True
-    if status == 400:
-        logger.error(f"{context} - Bad Request (400)")
-    elif status == 401:
-        logger.error(f"{context} - Unauthorized (401)")
-    elif status == 403:
-        logger.error(f"{context} - Forbidden (403)")
-    elif status == 404:
-        logger.error(f"{context} - Not Found (404)")
-    elif status == 429:
-        logger.warning(f"{context} - Too Many Requests (429) - Rate limited")
-    elif 500 <= status < 600:
-        logger.error(f"{context} - Server Error ({status})")
-    else:
-        logger.warning(f"{context} - Unexpected HTTP status {status}")
-    return False
+def human_delay(a, b):
+    time.sleep(rand.uniform(a, b))
 
 
 class ExtractMarriott:
     def __init__(self):
         self._proxy_fetcher = ProxyManager()
-        # self._headers_obj = get_random_sec_ch_headers(USER_AGENT)
 
-
-    def build_response(self, success: bool, data, status_code: int):
+    def build_response(self, success: bool, data: any, status_code: int):
         return {
-            "Success": success,
+            "success": success,
             "data": data,
             "status_code": status_code
         }
 
-    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count,
-                        max_retries=3, backoff_factor=2):
-        hotel_name_original = hotel_id
-        hotel_id = hotel_name_original.split('-')[0]
+    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
+        logger.info("Getting proxy IP for current session")
+        _proxy_url = self._proxy_fetcher.fetch_proxy()
+        if not _proxy_url:
+            message = "Proxy url not retrieved from the server"
+            return self.build_response(success=False, data=message, status_code=101)
+
+        parsed = urlparse(_proxy_url)
+        if parsed.username and parsed.password:
+            proxy = {
+                "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
+                "username": parsed.username,
+                "password": parsed.password,
+            }
+
+        logger.info("Proxy url dict created for request")
+        logger.info("Setting up crawler to extract data")
+
+        proxies = {
+            'http': _proxy_url,
+            'https': _proxy_url
+        }
+        logger.info("Proxy url dict created for request")
+
+        # ---------- Session Setup ----------
+        session = requests.Session()
+        session.proxies.update(proxies)
+
+        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        _headers = headers
 
         # Validate inputs
+        check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
+        check_out = datetime.strptime(check_out_date, "%Y-%m-%d")
+        length_of_stay = (check_out - check_in).days
+        if not hotel_id or length_of_stay <= 0 or guest_count <= 0:
+            raise ValueError("hotel_id/no_of_stays/guest must have valid values.")
+
+        hotel_id_name = hotel_id
+        parts = hotel_id_name.split("-", 1)
+        hotel_id = parts[0].strip()
+        logger.info(f"Hotel ID: {hotel_id}")
+        hotel_name = parts[1].strip() if len(parts) > 1 else ""
+        logger.info(f"Hotel Name: {hotel_name}")
+        encoded_hotel_name = quote(hotel_name, safe="")
+
         try:
-            if not hotel_id:
-                raise ValueError("Hotel ID is empty after parsing.")
-            check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
-            check_out = datetime.strptime(check_out_date, "%Y-%m-%d")
-
-            check_in_dd = check_in.strftime("%d")
-            check_in_mm = check_in.strftime("%m")
-            check_in_yyyy = check_in.strftime("%Y")
-
-            check_out_dd = check_out.strftime("%d")
-            check_out_mm = check_out.strftime("%m")
-            check_out_yyyy = check_out.strftime("%Y")
-
-            length_of_stay = (check_out - check_in).days
-            if length_of_stay <= 0:
-                raise ValueError("Check-out date must be after check-in date.")
-            if guest_count <= 0:
-                raise ValueError("Guest count must be positive.")
-        except Exception as e:
-            logger.error(f"Input validation error: {e}")
-            return self.build_response(False, str(e), 400)
-
-        for attempt in range(1, max_retries + 1):
-            try:
-                logger.info(f"Attempt {attempt}: Fetching proxy for session")
-                proxy_url = self._proxy_fetcher.fetch_proxy()
-                browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-                while browser_family not in ("chromium", "firefox"):
-                    browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-                # self._headers = headers
-                if not proxy_url:
-                    raise Exception("Proxy url not retrieved from the server")
-
-                proxies = {'http': proxy_url, 'https': proxy_url}
-                session = requests.Session()
-                session.proxies.update(proxies)
-                session.headers.update(headers)
-
-                # 1. Homepage
-                url_home = "https://www.marriott.com/default.mi"
-                resp1 = session.get(url_home, timeout=10)
-                if not handle_response_status(resp1, "1 - Home_Page"):
-                    return self.build_response(False, f"Homepage request failed", resp1.status_code)
-
-                # 2. JS Page
-                ref_url = f"https://www.marriott.com/en-us/hotels/{hotel_name_original}/overview/"
-                url_js = "https://www.marriott.com/etc.clientlibs/mcom-hws/clientlibs/clientlib-sitev2.min.0bc65bb4ab7ee16ba94edb6dad88335c.js"
-                headers_js = {
-                    'accept': '*/*',
-                    'sec-fetch-site': 'same-origin',
-                    'sec-fetch-mode': 'no-cors',
-                    'sec-fetch-dest': 'script',
-                    'referer': ref_url,
-                    'accept-language': 'en-US,en;q=0.9'
-                }
-                resp3 = session.get(url_js, headers=headers_js, timeout=10)
-                if not handle_response_status(resp3, "3 - JS_Page"):
-                    return self.build_response(False, f"JS page request failed", resp3.status_code)
-
-                pattern_phoenix_hws = r':"([^"]+)","apollographql-client-version":"v1","apollographql-client-name":"phoenix_hws"'
-                match = re.search(pattern_phoenix_hws, resp3.text)
-                if not match:
-                    raise Exception("Phoenix HWS signature not found in JS response.")
-                phoenix_hws_signature = match.group(1)
-
-                # 3. Standard Form (GraphQL)
-                url_gql = "https://www.marriott.com/mi/query/phoenixHWSLAR"
-                current_date = datetime.today().strftime("%Y-%m-%d")
-                next_day_date = (datetime.today() + timedelta(days=1)).strftime("%Y-%m-%d")
-                payload_gql = json.dumps({
-                    "query": "\n    query phoenixHWSLAR($search: LowestAvailableRatesPropertyIdsSearchInput) {\n        searchLowestAvailableRatesByPropertyIds(search: $search) {\n            edges {\n                node {\n                    property {\n                        id\n                        basicInformation {\n                            name\n                            __typename\n                        }\n                        __typename\n                    }\n                    rates {\n                        rateAmounts {\n                            amount {\n                                origin {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                locale {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                __typename\n                            }\n                            points\n                            mandatoryFees {\n                                origin {\n                                    valueDecimalPoint\n                                    value\n                                    currency\n                                    __typename\n                                }\n                                locale {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                __typename\n                            }\n                            amountPlusMandatoryFees {\n                                locale {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                origin {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                __typename\n                            }\n                            totalAmount {\n                                origin {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                locale {\n                                    currency\n                                    value\n                                    valueDecimalPoint\n                                    __typename\n                                }\n                                __typename\n                            }\n                            rateMode {\n                                code\n                                label\n                                description\n                                __typename\n                            }\n                            __typename\n                        }\n                        rateCategory {\n                            type {\n                                code\n                                label\n                                description\n                                __typename\n                            }\n                            value\n                            __typename\n                        }\n                        status {\n                            code\n                            description\n                            __typename\n                        }\n                        __typename\n                    }\n                    __typename\n                }\n                __typename\n            }\n            __typename\n        }\n    }\n",
-                    "variables": {
-                        "search": {
-                            "ids": [hotel_id.upper()],
-                            "options": {
-                                "startDate": current_date,
-                                "endDate": next_day_date,
-                                "includeTaxesAndFees": True,
-                                "quantity": 1,
-                                "numberInParty": guest_count,
-                                "rateRequestTypes": [{"type": "STANDARD", "value": ""}],
-                                "includeMandatoryFees": True
-                            }
-                        }
+            with sync_playwright() as p:
+                browser = p.chromium.launch(
+                    headless=True,
+                    proxy=proxy,
+                    args=[
+                        "--disable-blink-features=AutomationControlled",
+                        "--start-maximized",
+                        "--disable-dev-shm-usage",
+                        "--no-sandbox",
+                        "--disable-gpu",
+                        "--disable-infobars",
+                        "--ignore-certificate-errors",
+                        "--enable-features=NetworkService,NetworkServiceInProcess"
+                    ],
+                )
+                try:
+                    logger.info("Sending Home page request....")
+                    extra_headers = {
+                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
                     }
-                })
-                headers_gql = {
-                    'x-request-id': '',
-                    'accept-language': 'en-us',
-                    'graphql-operation-signature': phoenix_hws_signature,
-                    'apollographql-client-version': 'v1',
-                    'content-type': 'application/json',
-                    'apollographql-client-name': 'phoenix_hws',
-                    'accept': '*/*',
-                    'origin': 'https://www.marriott.com',
-                    'sec-fetch-site': 'same-origin',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-dest': 'empty',
-                    'referer': ref_url
-                }
-                resp4 = session.post(url_gql, headers=headers_gql, data=payload_gql, timeout=15)
-                if not handle_response_status(resp4, "4 - Standard_Form_Page"):
-                    return self.build_response(False, f"Standard form page request failed", resp4.status_code)
 
-                if "Invalid Property Code" in resp4.text:
-                    logger.error("Property Code is invalid.")
-                    return self.build_response(False, "Property Code is invalid.", resp4.status_code)
+                    logger.info(f"Selected UA: {_headers['user-agent']}")
 
-                # 4. Submit Form Page
-                url_submit_form = f"https://www.marriott.com/reservation/availabilitySearch.mi?destinationAddress.country=&lengthOfStay={length_of_stay}&fromDate={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&toDate={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&numberOfRooms=1&numberOfAdults={guest_count}&guestCountBox={guest_count}+Adults+Per+Room&childrenCountBox=0+Children+Per+Room&roomCountBox=1+Rooms&childrenCount=0&childrenAges=&clusterCode=none&corporateCode=&groupCode=&isHwsGroupSearch=true&propertyCode={hotel_id.upper()}&useRewardsPoints=true&flexibleDateSearch=false&t-start={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&t-end={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromDateDefaultFormat={check_in_mm}%2F{check_in_dd}%2F{check_in_yyyy}&toDateDefaultFormat={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromToDate_submit={check_out_mm}%2F{check_out_dd}%2F{check_out_yyyy}&fromToDate="
-                headers_submit = {
-                    'upgrade-insecure-requests': '1',
-                    'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                    'sec-fetch-site': 'same-origin',
-                    'sec-fetch-mode': 'navigate',
-                    'sec-fetch-user': '?1',
-                    'sec-fetch-dest': 'document',
-                    'referer': ref_url,
-                    'accept-language': 'en-US,en;q=0.9'
-                }
-                resp5 = session.get(url_submit_form, headers=headers_submit, timeout=25)
-                if resp5.status_code == 403:
-                    logger.warning("Cookies failed at form submission page.")
-                    if attempt + 1 < max_retries:
-                        retry_result = self.get_search_data(hotel_id, check_in_date, check_out_date, guest_count)
-                        attempt = attempt + 1
-                        if retry_result['status_code'] == 200:
-                            return retry_result
-                        elif attempt + 1 < max_retries:
-                            continue
-                    else:
-                        raise Exception("Failed after retries (form submission).")
+                    context = browser.new_context(
+                        user_agent=_headers["user-agent"],
+                        locale="en-US",
+                        extra_http_headers=extra_headers,
+                    )
 
-                if not handle_response_status(resp5, "5 - Submit_Form_Page"):
-                    return self.build_response(False, f"Submit form page request failed", resp5.status_code)
+                    page = context.new_page()
+                    page.set_default_timeout(100000)
 
-                # 5. Next JS Page
-                url_next_js = "https://www.marriott.com/mi-assets/mi-static/mi-book-renderer/phx-rel-r25.9.2-06sep20257pmist/_next/static/chunks/27005-9c0a223a96c39cbe.js"
-                headers_next_js = {
-                    'accept': '*/*',
-                    'sec-fetch-site': 'same-origin',
-                    'sec-fetch-mode': 'no-cors',
-                    'sec-fetch-dest': 'script',
-                    'referer': 'https://www.marriott.com/reservation/rateListMenu.mi',
-                    'accept-language': 'en-US,en;q=0.9'
-                }
-                resp7 = session.get(url_next_js, headers=headers_next_js, timeout=15)
-                if not handle_response_status(resp7, "7 - Next_JS_Page"):
-                    return self.build_response(False, f"Next JS page request failed", resp7.status_code)
+                    for attempt in range(1, max_retries + 1):
+                        try:
+                            page.goto("https://www.marriott.com/default.mi", wait_until="load", timeout=120000)
+                            human_delay(6, 12)
 
-                pattern_sig_search = r'"operationName":"PhoenixBookSearchProductsByProperty","signature":"([^"]+)"'
-                match_sig_search = re.search(pattern_sig_search, resp7.text)
-                signature_search = match_sig_search.group(1) if match_sig_search else None
+                            page.get_by_role("button", name="Find Hotels").wait_for(timeout=120000)
 
-                if not signature_search:
-                    logger.error("Signature for PhoenixBookSearchProductsByProperty not found.")
-                    return self.build_response(False, "Required operation signature not found in JS.", 500)
+                            logger.info("Home page request completed successfully.....")
 
-                # 6. Promotional Rate Page
-                url_promotional = "https://www.marriott.com/mi/query/PhoenixBookSearchProductsByProperty"
-                payload_promo = json.dumps({
-                    "operationName": "PhoenixBookSearchProductsByProperty",
-                    "variables": {
-                        "search": {
-                            "options": {
+                            # ---- Mouse movement ----
+                            logger.info("Sleeping for few seconds for mouse movement.....")
+                            human_delay(2, 5)
+                            page.mouse.move(rand.randint(0, 2), rand.randint(3, 8))
+                            page.mouse.down()
+                            page.mouse.move(0, rand.randint(100, 120))
+                            page.mouse.move(rand.randint(100, 120), rand.randint(100, 120))
+                            page.mouse.move(rand.randint(100, 120), 0)
+                            page.mouse.move(0, 0)
+                            page.mouse.up()
+
+                            page.keyboard.press("PageDown")
+                            human_delay(1, 3)
+                            page.keyboard.press("PageUp")
+                            human_delay(2, 4)
+
+                            logger.info("Mouse movement completed.....")
+                            break
+
+                        except PlaywrightTimeoutError as pwex:
+                            logger.warning(f"Attempt {attempt} failed: {pwex}")
+                            if attempt < max_retries:
+                                time.sleep(2)
+                            else:
+                                return self.build_response(success=False,
+                                                           data={"details": f"Failed after retries: {pwex}"},
+                                                           status_code=103)
+
+                    # ---- Room rates API calls ----s
+                    cookies = context.cookies()
+                    cookie_header = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+
+                    # ---------- Book Property Page ----------
+                    BookPropertyUrl = "https://www.marriott.com/mi/query/PhoenixBookProperty"
+                    BookPropertyPayload = json.dumps({
+                        "operationName": "PhoenixBookProperty",
+                        "variables": {
+                            "propertyId": hotel_id.upper()
+                        },
+                        "query": "query PhoenixBookProperty($propertyId: ID!) {\n  property(id: $propertyId) {\n    ... on Hotel {\n      basicInformation {\n        ... on HotelBasicInformation {\n          descriptions {\n            type {\n              code\n              __typename\n            }\n            text\n            __typename\n          }\n          isAdultsOnly\n          resort\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
+                    })
+                    session.headers.update({
+                        'host': 'www.marriott.com',
+                        'application-name': 'book',
+                        'x-request-id': '',
+                        'sec-ch-ua-platform': _headers["sec-ch-ua-platform"],
+                        'user-agent': _headers["user-agent"],
+                        'sec-ch-ua': _headers["sec-ch-ua"],
+                        'sec-ch-ua-mobile': _headers["sec-ch-ua-mobile"],
+                        'graphql-operation-name': 'PhoenixBookProperty',
+                        'graphql-force-safelisting': 'true',
+                        'accept': '*/*',
+                        'apollographql-client-version': '1',
+                        'content-type': 'application/json',
+                        'apollographql-client-name': 'phoenix_book',
+                        'graphql-require-safelisting': 'true',
+                        'accept-language': 'en-US',
+                        'graphql-operation-signature': '9f165424df22961c9a0d1664c26b9130e2fcf0318bc78c25972cc2e505455376',
+                        'origin': 'https://www.marriott.com',
+                        'sec-fetch-site': 'same-origin',
+                        'sec-fetch-mode': 'cors',
+                        'sec-fetch-dest': 'empty',
+                        'referer': 'https://www.marriott.com/reservation/rateListMenu.mi',
+                        'accept-encoding': 'gzip, deflate, br, zstd',
+                        'cookie': cookie_header,
+                    })
+
+                    BookPropertyResponse = session.post(url=BookPropertyUrl, data=BookPropertyPayload)
+                    logger.info(f"PhoenixBookProperty Status: {BookPropertyResponse.status_code}")
+                    logger.info(f"PhoenixBookProperty Data: {BookPropertyResponse.text[:200]}")
+
+                    # ---------- Rate List API ----------
+                    api_url = "https://www.marriott.com/mi/query/PhoenixBookSearchProductsByProperty"
+                    api_payload = json.dumps({
+                          "operationName": "PhoenixBookSearchProductsByProperty",
+                          "variables": {
+                            "search": {
+                              "options": {
                                 "startDate": check_in_date,
                                 "endDate": check_out_date,
                                 "quantity": 1,
                                 "numberInParty": guest_count,
                                 "childAges": [],
-                                "productRoomType": ["ALL"],
-                                "productStatusType": ["AVAILABLE"],
-                                "rateRequestTypes": [
-                                    {"value": "", "type": "STANDARD"},
-                                    {"value": "", "type": "PREPAY"},
-                                    {"value": "", "type": "PACKAGES"},
-                                    {"value": "MRM", "type": "CLUSTER"},
-                                    {"value": "", "type": "REDEMPTION"},
-                                    {"value": "", "type": "REGULAR"}
+                                "productRoomType": [
+                                  "ALL"
                                 ],
-                                "isErsProperty": True,
-                            },
-                            "propertyId": hotel_id.upper(),
-                        },
-                        "offset": 0,
-                        "limit": None
-                    },
-                    "query": """query PhoenixBookSearchProductsByProperty($search: ProductByPropertySearchInput, $offset: Int, $limit: Int) {
-                                  searchProductsByProperty(search: $search, offset: $offset, limit: $limit) {
-                                    edges {
-                                      node {
-                                        ... on HotelRoom {
-                                          availabilityAttributes {
-                                            rateCategory { type { code } value }
-                                            isNearSellout
-                                          }
-                                          rates {
-                                            name
-                                            description
-                                            rateAmounts {
-                                              amount {
-                                                origin { amount currency valueDecimalPoint }
-                                              }
-                                              points
-                                              pointsSaved
-                                              pointsToPurchase
-                                            }
-                                            localizedDescription { translatedText }
-                                            localizedName { translatedText }
-                                            rateAmountsByMode { averageNightlyRatePerUnit { amount { origin { value }}}}
-                                          }
-                                          basicInformation {
-                                            type
-                                            name
-                                            localizedName { translatedText }
-                                            description
-                                            membersOnly
-                                            oldRates
-                                            representativeRoom
-                                            housingProtected
-                                            actualRoomsAvailable
-                                            depositRequired
-                                            roomsAvailable
-                                            roomsRequested
-                                            ratePlan { ratePlanType ratePlanCode }
-                                            freeCancellationUntil
-                                          }
-                                          roomAttributes { attributes { id description groupID category { code description } accommodationCategory { code description }}}
-                                          totalPricing { quantity rateAmountsByMode { grandTotal { amount { origin { value }}} subtotalPerQuantity { amount { origin { value }}} totalMandatoryFeesPerQuantity { amount { origin { value }}}}}
-                                          id
-                                        }
-                                        id
-                                      }
-                                    }
-                                    total
-                                    status {
-                                      ... on UserInputError {
-                                        httpStatus
-                                        messages { user { message field } }
-                                      }
-                                      ... on DateRangeTooLongError {
-                                        httpStatus
-                                        messages { user { message field } }
-                                      }
-                                    }
+                                "productStatusType": [
+                                  "AVAILABLE"
+                                ],
+                                "rateRequestTypes": [
+                                  {
+                                    "value": "",
+                                    "type": "STANDARD"
+                                  },
+                                  {
+                                    "value": "",
+                                    "type": "PREPAY"
+                                  },
+                                  {
+                                    "value": "",
+                                    "type": "PACKAGES"
+                                  },
+                                  {
+                                    "value": "MRM",
+                                    "type": "CLUSTER"
+                                  },
+                                  {
+                                    "value": "",
+                                    "type": "REDEMPTION"
                                   }
-                                }"""
-                })
-                headers_promo = {
-                    'application-name': 'book',
-                    'x-request-id': '',
-                    'graphql-operation-name': 'PhoenixBookSearchProductsByProperty',
-                    'graphql-force-safelisting': 'true',
-                    'accept': '*/*',
-                    'apollographql-client-version': '1',
-                    'content-type': 'application/json',
-                    'apollographql-client-name': 'phoenix_book',
-                    'graphql-require-safelisting': 'true',
-                    'accept-language': 'en-US',
-                    'graphql-operation-signature': signature_search,
-                    'origin': 'https://www.marriott.com',
-                    'sec-fetch-site': 'same-origin',
-                    'sec-fetch-mode': 'cors',
-                    'sec-fetch-dest': 'empty',
-                    'referer': 'https://www.marriott.com/reservation/rateListMenu.mi'
-                }
-                resp10 = session.post(url_promotional, headers=headers_promo, data=payload_promo, timeout=20)
-                if resp10.status_code == 403:
-                    logger.warning("Cookies failed at promo page.")
-                    if attempt + 1 < max_retries:
-                        retry_result  = self.get_search_data(hotel_id, check_in_date, check_out_date, guest_count)
-                        attempt = attempt + 1
-                        if retry_result['status_code'] == 200:
-                            return retry_result
-                        elif attempt + 1 < max_retries:
-                            continue
+                                ],
+                                "isErsProperty": False
+                              },
+                              "propertyId": hotel_id.upper()
+                            },
+                            "offset": 0,
+                            "limit": 150
+                          },
+                          "query": "query PhoenixBookSearchProductsByProperty($search: ProductByPropertySearchInput, $offset: Int, $limit: Int) {\n  searchProductsByProperty(search: $search, offset: $offset, limit: $limit) {\n    edges {\n      node {\n        ... on HotelRoom {\n          availabilityAttributes {\n            rateCategory {\n              type {\n                code\n                __typename\n              }\n              value\n              __typename\n            }\n            isNearSellout\n            __typename\n          }\n          rates {\n            name\n            description\n            rateAmounts {\n              amount {\n                origin {\n                  amount\n                  currency\n                  valueDecimalPoint\n                  __typename\n                }\n                __typename\n              }\n              points\n              pointsSaved\n              pointsToPurchase\n              __typename\n            }\n            localizedDescription {\n              translatedText\n              sourceText\n              __typename\n            }\n            localizedName {\n              translatedText\n              sourceText\n              __typename\n            }\n            rateAmountsByMode {\n              averageNightlyRatePerUnit {\n                amount {\n                  origin {\n                    amount\n                    currency\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          basicInformation {\n            type\n            name\n            localizedName {\n              translatedText\n              __typename\n            }\n            description\n            localizedDescription {\n              translatedText\n              __typename\n            }\n            membersOnly\n            oldRates\n            representativeRoom\n            housingProtected\n            actualRoomsAvailable\n            depositRequired\n            roomsAvailable\n            roomsRequested\n            ratePlan {\n              ratePlanType\n              ratePlanCode\n              marketCode\n              __typename\n            }\n            freeCancellationUntil\n            __typename\n          }\n          roomAttributes {\n            attributes {\n              id\n              description\n              groupID\n              category {\n                code\n                description\n                __typename\n              }\n              accommodationCategory {\n                code\n                description\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          totalPricing {\n            quantity\n            rateAmountsByMode {\n              grandTotal {\n                amount {\n                  origin {\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              subtotalPerQuantity {\n                amount {\n                  origin {\n                    currency\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              totalMandatoryFeesPerQuantity {\n                amount {\n                  origin {\n                    currency\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          id\n          __typename\n        }\n        id\n        __typename\n      }\n      __typename\n    }\n    total\n    status {\n      ... on UserInputError {\n        httpStatus\n        messages {\n          user {\n            message\n            field\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      ... on DateRangeTooLongError {\n        httpStatus\n        messages {\n          user {\n            message\n            field\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
+                    })
+
+                    session.headers.update({
+                        'graphql-operation-name': 'PhoenixBookSearchProductsByProperty',
+                        'graphql-operation-signature': 'a1079a703a2d21d82c0c65e4337271c3029c69028c6189830f30882170075756',
+                    })
+
+                    logger.info(f"Navigating to roomrate API :: {api_url}")
+
+                    response = session.post(url=api_url, data=api_payload)
+
+                    logger.info(f"Final Page Status: {response.status_code}")
+                    logger.info(f"Final Page Data: {response.text[:200]}")
+
+                    decodedResponse = response.text
+                    if '"Invalid Property Code"' in decodedResponse:
+                        logging.error("Property Code is invalid.")
+                        message = {
+                            "details": "Property Code is invalid."
+                        }
+                        return self.build_response(success=True, data=message, status_code=response.status_code)
+
+                    data_json = None
+                    if response.status_code == 200 and decodedResponse:
+                        try:
+                            data_json = json.loads(decodedResponse)
+                        except Exception as e:
+                            message = {
+                                "details": f"Response Json not available {e}"
+                            }
+                            return self.build_response(success=False, data=message, status_code=response.status_code)
+
+                    if response.status_code == 200 and data_json and '"code":"standard"' in decodedResponse and '"code":"redemption"' in decodedResponse:
+                        logger.info(f"Response fetched successfully from Roomrate API")
+                        return self.build_response(success=True, data=data_json, status_code=response.status_code)
+                    elif response.status_code == 200 and data_json and '"code":"standard"' in decodedResponse and '"code":"redemption"' not in decodedResponse:
+                        logger.error(f"Hotel is not available at selected date.")
+                        message = {
+                            "details": "Hotel is not available at selected date."
+                        }
+                        return self.build_response(success=True, data=message, status_code=response.status_code)
                     else:
-                        raise Exception("Failed after retries (promo API).")
-                if not handle_response_status(resp10, "10 - Promotional_Rate_Page"):
-                    return self.build_response(False, f"Promotional rate page request failed", resp10.status_code)
+                        logger.error(f"Roomrate API failed with status {response.status_code}")
+                        message = {
+                            "details": f"Roomrate API failed with status {response.status_code}"
+                        }
+                        return self.build_response(success=False, data=message, status_code=response.status_code)
 
-                if "\"Invalid Property Code\"" in resp10.text:
-                    logger.error("Property Code is invalid.")
-                    return self.build_response(False, "Property Code is invalid.", resp10.status_code)
+                except Exception as ex:
+                    logger.exception(f"Exception occurred during scraping: {ex}")
+                    message = {
+                        "details": f"Exception occurred during scraping: {ex}"
+                    }
+                    return self.build_response(success=False, data=message, status_code=103)
 
-                if '"code":"standard"' in resp10.text and '"code":"redemption"' not in resp10.text:
-                    logger.error("No redemption rates available for selected dates.")
-                    return self.build_response(False, "No redemption rates available for selected dates.",
-                                               resp10.status_code)
+                finally:
+                    logger.info("Closing browser...")
+                    browser.close()
+        except Exception as ex:
+            logger.exception(f"Critical Error: {ex}")
+            message = {
+                "details": f"Critical Error: {ex}"
+            }
+            return self.build_response(success=False, data=message, status_code=100)
 
-                # Return final JSON response in generic format
-                return self.build_response(True, resp10.json(), resp10.status_code)
 
-            except (ProxyError, ConnectionError, Timeout) as e:
-                logger.warning(f"Network/Proxy error on attempt {attempt}: {e}")
-                if attempt < max_retries:
-                    sleep_time = backoff_factor ** attempt
-                    logger.info(f"Retrying after {sleep_time} seconds...")
-                    time.sleep(sleep_time)
-                else:
-                    logger.error(f"Max retries reached. Last error: {e}")
-                    return self.build_response(False, "Network or proxy error, unable to fetch data.", 503)
-            except HTTPError as e:
-                logger.error(f"HTTP error: {e.response.status_code} - {e.response.reason}")
-                return self.build_response(False, f"HTTP error {e.response.status_code}", e.response.status_code)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON decode error: {e}")
-                return self.build_response(False, "Failed to parse JSON response.", 500)
-            except Exception as e:
-                logger.error(f"Unexpected error: {e}", exc_info=True)
-                return self.build_response(False, "Unexpected error occurred.", 500)
-
-# ---------------- Runner ----------------
-if __name__ == "__main__":
+if __name__ =="__main__":
     crawl = ExtractMarriott()
     data = crawl.get_search_data(
         hotel_id="snabp-courtyard-anaheim-buena-park",

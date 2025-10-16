@@ -1,0 +1,99 @@
+2025-10-10 16:14:18,933 - INFO - Hotel ID: yycza
+2025-10-10 16:14:18,935 - INFO - Hotel Name: Hyatt Place Calgary Airport
+2025-10-10 16:14:28,887 - INFO - Launching Playwright browser...
+2025-10-10 16:14:32,467 - INFO - Navigating to hyatt home page...
+2025-10-10 16:14:41,221 - INFO - No cookie banner found or already accepted.
+2025-10-10 16:14:41,222 - INFO - Typing hotel name into search field...
+2025-10-10 16:15:11,238 - ERROR - Exception during scraping: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+Traceback (most recent call last):
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\crm_core\hotel_crawlers\hyatt\hyatt_pydoll.py", line 607, in get_search_data
+    await page.focus("#search-term")
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 10671, in focus
+    await self._impl_obj.focus(
+        selector=selector, strict=strict, timeout=timeout
+    )
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_page.py", line 975, in focus
+    return await self._main_frame.focus(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 683, in focus
+    await self._channel.send("focus", self._timeout, locals_to_params(locals()))
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 558, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+
+2025-10-10 16:18:50,539 - INFO - Hotel ID: yycza
+2025-10-10 16:18:50,540 - INFO - Hotel Name: Hyatt Place Calgary Airport
+2025-10-10 16:18:51,719 - INFO - Launching Playwright browser...
+2025-10-10 16:18:52,239 - INFO - Navigating to hyatt home page...
+2025-10-10 16:19:02,073 - INFO - No cookie banner found or already accepted.
+2025-10-10 16:19:02,073 - INFO - Typing hotel name into search field...
+2025-10-10 16:19:32,102 - ERROR - Exception during scraping: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+Traceback (most recent call last):
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\crm_core\hotel_crawlers\hyatt\hyatt_pydoll.py", line 607, in get_search_data
+    await page.focus("#search-term")
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 10671, in focus
+    await self._impl_obj.focus(
+        selector=selector, strict=strict, timeout=timeout
+    )
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_page.py", line 975, in focus
+    return await self._main_frame.focus(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 683, in focus
+    await self._channel.send("focus", self._timeout, locals_to_params(locals()))
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 558, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+
+2025-10-10 16:19:38,710 - INFO - Hotel ID: yycza
+2025-10-10 16:19:38,711 - INFO - Hotel Name: Hyatt Place Calgary Airport
+2025-10-10 16:19:39,818 - INFO - Launching Playwright browser...
+2025-10-10 16:19:40,314 - INFO - Navigating to hyatt home page...
+2025-10-10 16:19:48,850 - INFO - No cookie banner found or already accepted.
+2025-10-10 16:19:48,850 - INFO - Typing hotel name into search field...
+2025-10-10 16:20:18,874 - ERROR - Exception during scraping: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+Traceback (most recent call last):
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\crm_core\hotel_crawlers\hyatt\hyatt_pydoll.py", line 607, in get_search_data
+    await page.focus("#search-term")
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\async_api\_generated.py", line 10671, in focus
+    await self._impl_obj.focus(
+        selector=selector, strict=strict, timeout=timeout
+    )
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_page.py", line 975, in focus
+    return await self._main_frame.focus(**locals_to_params(locals()))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_frame.py", line 683, in focus
+    await self._channel.send("focus", self._timeout, locals_to_params(locals()))
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 69, in send
+    return await self._connection.wrap_api_call(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "C:\Users\sunnyk_engineosol\PycharmProjects\Odynn-Hotel-Framework\.venv\Lib\site-packages\playwright\_impl\_connection.py", line 558, in wrap_api_call
+    raise rewrite_error(error, f"{parsed_st['apiName']}: {error}") from None
+playwright._impl._errors.TimeoutError: Page.focus: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator("#search-term")
+
