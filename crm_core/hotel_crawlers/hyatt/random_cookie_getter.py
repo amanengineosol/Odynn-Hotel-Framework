@@ -4,20 +4,16 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from redis.exceptions import RedisError
-load_dotenv()
-# If you're using aioredis:
-# import aioredis
-
-# If you're using redis-py >= 4.2 (which includes asyncio support):
 from redis.asyncio import Redis
 
-class CrawlerRedisClient:
+load_dotenv()
 
+class CrawlerRedisClient:
     def __init__(self, db: int):
         # Adjust connection parameters as needed
         self.client = Redis(
-            host=os.getenv('REDIS_HOST'),
-            port=os.getenv('REDIS_PORT'),
+            host=os.getenv('REDIS_HOST','localhost'),
+            port=os.getenv('REDIS_PORT','6379'),
             db=db,
             decode_responses=True
         )

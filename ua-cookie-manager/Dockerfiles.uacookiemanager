@@ -1,0 +1,16 @@
+# wrapper_api/Dockerfiles.app
+
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY ./ua-cookie-manager /app/
+
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+ENV PYTHONPATH=/app
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "9001", "--workers", "1"]
+

@@ -1,8 +1,9 @@
+import random
 from urllib.parse import quote
 import aiohttp
 import asyncio
 from datetime import datetime
-from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
+from .random_user_agent import get_random_sec_ch_headers
 from .random_cookie_getter import CrawlerRedisClient
 from .proxy_manager import ProxyManager
 
@@ -29,9 +30,12 @@ class HyattExtractor:
         }
         redis_client= CrawlerRedisClient(db=1)
         token = await redis_client.get_cookie()
-        print(token)
-        print(type(token))
-        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        cookie_list = token['cookie_list']
+        data = random.choice(cookie_list)
+        tkrm = data['cookie_value']
+        user_agent = data['user_agent']
+
+        browser_family, headers = get_random_sec_ch_headers(user_agent)
         print("browser_family", browser_family)
         print("Headers", headers)
 
@@ -55,7 +59,6 @@ class HyattExtractor:
         )
 
         url = self.base_url + hotel_id + params
-        print(f"Requesting: {url}")
 
         req_headers = {
             "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -72,13 +75,12 @@ class HyattExtractor:
             'sec-fetch-site': 'same-origin',
             "connection": "keep-alive",
             'user-agent': headers.get('user-agent'),
-            'Cookie': f'tkrm_alpekz_s1.3-ssn={token}; tkrm_alpekz_s1.3={token}; rate_filter=woh',
+            'Cookie': f'tkrm_alpekz_s1.3-ssn={tkrm}; tkrm_alpekz_s1.3={tkrm}; rate_filter=woh; at_check=true',
         }
-        print("using.........",headers.get('user-agent'))
 
         async with self.session.get(url, headers=req_headers, proxy=proxy_url) as response:
             print(f"Status: {response.status}")
-            print(response.request_info)
+            # print(response.request_info)
             if response.status == 200:
                 data = await response.json()
                 return await self.build_response(success=True, data=data, status_code=response.status)
@@ -98,15 +100,16 @@ class HyattExtractor:
 
 
 # --------------- Run Example -----------------
-async def main():
-    hyatt = HyattExtractor()
-    await hyatt.get_search_data(
-        check_in_date="2026-01-10",
-        check_out_date="2026-01-12",
-        hotel_id="yvrrv-Hyatt Regency Vancouver",
-        guest_count=1
-    )
-    await hyatt.close()
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# async def main():
+#     hyatt = HyattExtractor()
+#     data = await hyatt.get_search_data(
+#         check_in_date="2026-01-10",
+#         check_out_date="2026-01-12",
+#         hotel_id="yvrrv-Hyatt Regency Vancouver",
+#         guest_count=1
+#     )
+#     print(data)
+#     await hyatt.close()
+#
+# if __name__ == "__main__":
+#     asyncio.run(main())

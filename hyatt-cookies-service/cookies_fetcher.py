@@ -1,26 +1,233 @@
-import json
-import logging
-import random as rand
-import asyncio
-import time
-from urllib.parse import urlparse
-from patchright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+# import json
+# import logging
+# import random as rand
+# import asyncio
+# import time
+# from urllib.parse import urlparse
+# from patchright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+#
+# from proxy_manager import ProxyManager
+# from random_user_agent import get_random_sec_ch_headers, USER_AGENT
+# from cache_processor import CrawlerRedisClient   # adjust import to your project layout
+#
+# # ---------------- Log configuration ----------------
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s - %(levelname)s - %(message)s",
+#     handlers=[logging.FileHandler("hyatt.log"), logging.StreamHandler()]
+# )
+# logger = logging.getLogger(__name__)
+#
+# # ---------------- Utility ----------------
+# async def human_delay(a: float, b: float):
+#     await asyncio.sleep(rand.uniform(a, b))
+#
+# def parse_proxy(proxy_url: str):
+#     if not proxy_url:
+#         return None
+#     parsed = urlparse(proxy_url)
+#     proxy = {"server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}"}
+#     if parsed.username and parsed.password:
+#         proxy["username"] = parsed.username
+#         proxy["password"] = parsed.password
+#     return proxy
+#
+# class CookiesFetcher:
+#     def __init__(self):
+#         self._proxy_fetcher = ProxyManager()
+#         self._redis_client = CrawlerRedisClient(1)
+#
+#     def build_response(self, success: bool, data: any, status_code: int):
+#         return {"success": success, "data": data, "status_code": status_code}
+#
+#     async def save_cookie_to_redis(self, cookie_value: str):
+#         try:
+#             save_fn = getattr(self._redis_client, "save_cookie", None)
+#             if save_fn:
+#                 if asyncio.iscoroutinefunction(save_fn):
+#                     await save_fn(cookie_value)
+#                 else:
+#                     loop = asyncio.get_event_loop()
+#                     await loop.run_in_executor(None, save_fn, cookie_value)
+#                 logger.info("Cookie saved to Redis")
+#             else:
+#                 logger.warning("Redis client does not implement save_cookie()")
+#         except Exception:
+#             logger.exception("Failed to save cookie to Redis (ignored)")
+#
+#     @staticmethod
+#     def cookies_to_header(cookies_list):
+#         return "; ".join(f"{c['name']}={c['value']}" for c in cookies_list if c.get("name") and c.get("value"))
+#
+#     async def wait_for_cookies(self, context, names, timeout_s=20, poll_interval=0.5):
+#         deadline = time.time() + timeout_s
+#         while time.time() < deadline:
+#             cookies = await context.cookies()
+#             cookie_names = {c["name"] for c in cookies}
+#             if all(name in cookie_names for name in names):
+#                 return cookies
+#             await asyncio.sleep(poll_interval)
+#         return await context.cookies()
+#
+#     async def get_cookies(self, max_retries=3, headless=True, use_proxy=True, save_local_json=True):
+#         _proxy_url = self._proxy_fetcher.fetch_proxy() if use_proxy else None
+#         proxy = parse_proxy(_proxy_url) if _proxy_url else None
+#         if use_proxy and not proxy:
+#             logger.warning("Proxy enabled but parse failed; continuing without proxy")
+#
+#         # Random UA
+#         browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+#         _headers = headers or {"user-agent": USER_AGENT}
+#
+#         SEARCH_URL = (
+#             "https://www.hyatt.com/HyattSearch?location=Hyatt+Place+Montreal+-+Downtown"
+#             "&checkinDate=2025-11-12&checkoutDate=2025-11-14&rooms=1&adults=1&kids=0"
+#             "&spiritCode=yulzm&locale=en-US&rate=Standard&childAge1=&childAge2=&childAge3="
+#             "&childAge4=&offercode=&corp_id=&rateFilter=woh&accessibilityCheck=false&roomTypeCode="
+#         )
+#         WATCH_COOKIES = ["x-kpsdk-ct", "tkrm_alpekz_s1.3-ssn"]
+#
+#         try:
+#             async with async_playwright() as p:
+#                 launch_kwargs = {"headless": headless,
+#                                   "args": [
+#                                     '--no-first-run',
+#                                     '--disable-blink-features=AutomationControlled',
+#                                     '--disable-dev-shm-usage',
+#                                     '--no-sandbox',
+#                                     '--disable-setuid-sandbox'
+#                             ]}
+#                 if proxy:
+#                     launch_kwargs["proxy"] = proxy
+#
+#                 browser = await p.chromium.launch(**launch_kwargs)
+#                 try:
+#                     context = await browser.new_context(
+#                         user_agent=_headers.get("user-agent", USER_AGENT),
+#                         locale="en-US",
+#                         extra_http_headers={k: v for k, v in _headers.items() if k.lower() != "user-agent"}
+#                     )
+#                     page = await context.new_page()
+#                     page.set_default_timeout(120000)
+#                     await page.add_style_tag(content="*, *::before, *::after {transition:none!important;animation:none!important;}")
+#
+#                     cookies_data = {}
+#
+#                     # Listen to responses and collect cookies
+#                     raw_cookies_list = []
+#
+#                     async def handle_response(response):
+#                         if '/shop/rooms/' in response.url:
+#                             try:
+#                                 headers = await response.all_headers()
+#                                 if "set-cookie" in headers:
+#                                     raw_cookies_list.append(headers["set-cookie"])
+#                             except Exception:
+#                                 pass
+#
+#                     page.on("response", handle_response)
+#
+#                     for attempt in range(1, max_retries + 1):
+#                         try:
+#                             logger.info(f"Attempt {attempt} navigating to Hyatt home")
+#                             await page.goto("https://www.hyatt.com/loyalty/en-US", wait_until="load")
+#                             await human_delay(4, 8)
+#                             await asyncio.sleep(4)
+#
+#                             logger.info(f"Navigating to SEARCH_URL to trigger cookies")
+#                             await page.goto(SEARCH_URL, wait_until="load")
+#                             await human_delay(3, 6)
+#
+#                             cookies = await self.wait_for_cookies(context, WATCH_COOKIES, timeout_s=25)
+#                             status = False
+#                             for c in cookies:
+#                                 if c.get("name") in WATCH_COOKIES:
+#                                     cookies_data[c["name"]] = c.get("value")
+#                                     await self.save_cookie_to_redis(c.get("value"))
+#
+#                             cookie_header = self.cookies_to_header(cookies)
+#                             result = {"cookies": cookies_data, "cookie_header": cookie_header, "raw_cookies": cookies}
+#                             return self.build_response(True, result, 200)
+#
+#                         except PlaywrightTimeoutError as pwex:
+#                             logger.warning(f"Attempt {attempt} timeout: {pwex}")
+#                             if attempt == max_retries:
+#                                 return self.build_response(False, {"details": str(pwex)}, 103)
+#                         except Exception as inner_ex:
+#                             logger.exception(f"Attempt {attempt} error: {inner_ex}")
+#                             if attempt == max_retries:
+#                                 return self.build_response(False, {"details": str(inner_ex)}, 103)
+#
+#                 finally:
+#                     await browser.close()
+#         except Exception as ex:
+#             logger.exception(f"Critical Error: {ex}")
+#             return self.build_response(False, {"details": str(ex)}, 100)
+#
+#
+# if __name__ == "__main__":
+#     fetcher = CookiesFetcher()
+#     resp = asyncio.run(fetcher.get_cookies(max_retries=3, headless=False, use_proxy=True, save_local_json=True))
+#     print(json.dumps(resp, indent=2))
 
+import asyncio
+import json
+import time
+import logging
+from patchright.async_api import async_playwright
+from ua import user_agent
+import random as rand
+from urllib.parse import urlparse, quote
 from proxy_manager import ProxyManager
-from random_user_agent import get_random_sec_ch_headers, USER_AGENT
-from cache_processor import CrawlerRedisClient   # adjust import to your project layout
+from random_user_agent import get_random_sec_ch_headers
+from datetime import datetime, timedelta
 
 # ---------------- Log configuration ----------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("hyatt.log"), logging.StreamHandler()]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger(__name__)
 
-# ---------------- Utility ----------------
+
 async def human_delay(a: float, b: float):
     await asyncio.sleep(rand.uniform(a, b))
+
+
+BROWSER_MAP = {
+    "chrome": "chromium",
+    "edge": "chromium",
+    "opera": "chromium",
+    "firefox": "firefox",
+    "safari": "webkit"
+}
+
+HOTEL_LIST = [
+    "yulzm-Hyatt Place Montreal - Downtown",
+    "yulct-Hyatt Centric Montreal",
+    "torjd-The Anndore House",
+    "yyzjd-The Walper Hotel",
+    "ancxa-Hyatt House Anchorage",
+    "ylwzk-Hyatt Place Kelowna",
+    "yxszp-Hyatt Place Prince George",
+    "yvrrv-Hyatt Regency Vancouver",
+    "yowzo-Hyatt Place Ottawa - West",
+]
+
+
+def get_random_hotel():
+    """Selects a random hotel and URL-encodes it safely for query usage."""
+    hotel_name = rand.choice(HOTEL_LIST)
+    parts = hotel_name.split("-", 1)
+    hotel_id = parts[0].strip()
+    logger.info(f"Hotel ID: {hotel_id}")
+    hotel_name = parts[1].strip() if len(parts) > 1 else ""
+    logger.info(f"Hotel Name: {hotel_name}")
+    encoded_hotel = quote(hotel_name, safe="")
+    logger.info(f"Encoded Hotel Name: {encoded_hotel}")
+    return hotel_id, encoded_hotel
+
 
 def parse_proxy(proxy_url: str):
     if not proxy_url:
@@ -32,32 +239,44 @@ def parse_proxy(proxy_url: str):
         proxy["password"] = parsed.password
     return proxy
 
-class CookiesFetcher:
-    def __init__(self):
+
+def generate_random_dates():
+    today = datetime.today()
+    checkin_offset = rand.randint(5, 65)
+    checkin_date = today + timedelta(days=checkin_offset)
+    checkout_offset = rand.randint(3, 10)
+    checkout_date = checkin_date + timedelta(days=checkout_offset)
+    checkin_str = checkin_date.strftime("%Y-%m-%d")
+    checkout_str = checkout_date.strftime("%Y-%m-%d")
+    return checkin_str, checkout_str
+
+
+check_in, check_out = generate_random_dates()
+hotel_id, encoded_location = get_random_hotel()
+SEARCH_URL = (
+    f"https://www.hyatt.com/HyattSearch?location={encoded_location}"
+    f"&checkinDate={check_in}&checkoutDate={check_out}&rooms=1&adults=1&kids=0"
+    f"&spiritCode={hotel_id}&locale=en-US&rate=Standard&childAge1=&childAge2=&childAge3="
+    "&childAge4=&offercode=&corp_id=&rateFilter=woh&accessibilityCheck=false&roomTypeCode="
+)
+logger.info(f"SEARCH_URL: {SEARCH_URL}")
+
+
+class UserAgentExecutor:
+    """Iterates through all user agents for the given browser and runs Playwright contexts."""
+
+    def __init__(self, browser_name: str, user_agents: dict):
+        if browser_name not in BROWSER_MAP:
+            raise ValueError(f"Unsupported browser: {browser_name}")
+        self.playwright_browser = BROWSER_MAP[browser_name]
+        self.headers = {}
+        self.cookies_data = {}
+        self.browser_name = browser_name
         self._proxy_fetcher = ProxyManager()
-        self._redis_client = CrawlerRedisClient(1)
-
-    def build_response(self, success: bool, data: any, status_code: int):
-        return {"success": success, "data": data, "status_code": status_code}
-
-    async def save_cookie_to_redis(self, cookie_value: str):
-        try:
-            save_fn = getattr(self._redis_client, "save_cookie", None)
-            if save_fn:
-                if asyncio.iscoroutinefunction(save_fn):
-                    await save_fn(cookie_value)
-                else:
-                    loop = asyncio.get_event_loop()
-                    await loop.run_in_executor(None, save_fn, cookie_value)
-                logger.info("Cookie saved to Redis")
-            else:
-                logger.warning("Redis client does not implement save_cookie()")
-        except Exception:
-            logger.exception("Failed to save cookie to Redis (ignored)")
-
-    @staticmethod
-    def cookies_to_header(cookies_list):
-        return "; ".join(f"{c['name']}={c['value']}" for c in cookies_list if c.get("name") and c.get("value"))
+        self.WATCH_COOKIES = ["x-kpsdk-ct", "tkrm_alpekz_s1.3-ssn"]
+        self.user_agents = user_agents.get(browser_name, [])
+        if not self.user_agents:
+            raise ValueError(f"No user agents found for browser '{browser_name}'.")
 
     async def wait_for_cookies(self, context, names, timeout_s=20, poll_interval=0.5):
         deadline = time.time() + timeout_s
@@ -69,103 +288,91 @@ class CookiesFetcher:
             await asyncio.sleep(poll_interval)
         return await context.cookies()
 
-    async def get_cookies(self, max_retries=3, headless=True, use_proxy=True, save_local_json=True):
+    async def create_context(self, playwright, user_agent: str, use_proxy=True):
         _proxy_url = self._proxy_fetcher.fetch_proxy() if use_proxy else None
         proxy = parse_proxy(_proxy_url) if _proxy_url else None
         if use_proxy and not proxy:
             logger.warning("Proxy enabled but parse failed; continuing without proxy")
+        browser_type = getattr(playwright, self.playwright_browser)
+        args = []
+        if self.playwright_browser == "chromium":
+            args = [
+                # '--no-first-run',
+                # '--no-default-browser-check',
+                # '--disable-blink-features=AutomationControlled',
+                # '--disable-http2',
+                # '--disable-web-security',
+                # '--disable-3d-apis',
+                # '--disable-webrtc-encryption',
+                # '--disable-features=WebRtcHideLocalIpsWithMdns',
+                # '--disable-features=VizDisplayCompositor',
+                # '--disable-dev-shm-usage',
+                # '--no-sandbox',
+                # '--disable-setuid-sandbox',
+                # '--disable-background-timer-throttling',
+                # '--disable-backgrounding-occluded-windows',
+                # '--disable-renderer-backgrounding'
+            ]
+        browser = await browser_type.launch(headless=False, proxy=proxy, args=args)
+        context = await browser.new_context(user_agent=user_agent, locale="en-US",
+                                            extra_http_headers={k: v for k, v in self.headers.items() if
+                                                                k.lower() != "user-agent"})
+        return browser, context
 
-        # Random UA
-        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        _headers = headers or {"user-agent": USER_AGENT}
+    async def execute(self):
+        async with async_playwright() as playwright:
+            for ua in self.user_agents:
+                browser_family, self.headers = get_random_sec_ch_headers(ua)
+                logger.info(f"Launching {self.browser_name} with UA:{ua}")
+                browser, context = await self.create_context(playwright, ua)
+                page = await context.new_page()
+                # await page.add_style_tag(content="*, *::before, *::after {transition:none!important;animation:none!important;}")
+                raw_cookies_list = []
 
-        SEARCH_URL = (
-            "https://www.hyatt.com/HyattSearch?location=Hyatt+Place+Montreal+-+Downtown"
-            "&checkinDate=2025-11-12&checkoutDate=2025-11-14&rooms=1&adults=1&kids=0"
-            "&spiritCode=yulzm&locale=en-US&rate=Standard&childAge1=&childAge2=&childAge3="
-            "&childAge4=&offercode=&corp_id=&rateFilter=woh&accessibilityCheck=false&roomTypeCode="
-        )
-        WATCH_COOKIES = ["x-kpsdk-ct", "tkrm_alpekz_s1.3-ssn"]
-
-        try:
-            async with async_playwright() as p:
-                launch_kwargs = {"headless": headless,
-                                  "args": [
-                                    '--no-first-run',
-                                    '--disable-blink-features=AutomationControlled',
-                                    '--disable-dev-shm-usage',
-                                    '--no-sandbox',
-                                    '--disable-setuid-sandbox'
-                            ]}
-                if proxy:
-                    launch_kwargs["proxy"] = proxy
-
-                browser = await p.chromium.launch(**launch_kwargs)
-                try:
-                    context = await browser.new_context(
-                        user_agent=_headers.get("user-agent", USER_AGENT),
-                        locale="en-US",
-                        extra_http_headers={k: v for k, v in _headers.items() if k.lower() != "user-agent"}
-                    )
-                    page = await context.new_page()
-                    page.set_default_timeout(120000)
-                    await page.add_style_tag(content="*, *::before, *::after {transition:none!important;animation:none!important;}")
-
-                    cookies_data = {}
-
-                    # Listen to responses and collect cookies
-                    raw_cookies_list = []
-
-                    async def handle_response(response):
-                        if '/shop/rooms/' in response.url:
-                            try:
-                                headers = await response.all_headers()
-                                if "set-cookie" in headers:
-                                    raw_cookies_list.append(headers["set-cookie"])
-                            except Exception:
-                                pass
-
-                    page.on("response", handle_response)
-
-                    for attempt in range(1, max_retries + 1):
+                async def handle_response(response):
+                    if '/shop/rooms/' in response.url:
                         try:
-                            logger.info(f"Attempt {attempt} navigating to Hyatt home")
-                            await page.goto("https://www.hyatt.com/loyalty/en-US", wait_until="load")
-                            await human_delay(4, 8)
-                            await asyncio.sleep(4)
+                            headers = await response.all_headers()
+                            if "set-cookie" in headers:
+                                raw_cookies_list.append(headers["set-cookie"])
+                        except Exception:
+                            pass
 
-                            logger.info(f"Navigating to SEARCH_URL to trigger cookies")
-                            await page.goto(SEARCH_URL, wait_until="load")
-                            await human_delay(3, 6)
+                page.on("response", handle_response)
+                page.default_timeout = 100000
+                try:
+                    await page.goto("https://www.hyatt.com/loyalty/en-US", wait_until="load", timeout=120000)
+                    logger.info(f"Loaded Home Page")
+                    await human_delay(4, 8)
+                    await asyncio.sleep(rand.randint(3, 6))
+                    logger.info(f"Navigating to SEARCH_URLw to trigger cookies")
+                    await page.goto(SEARCH_URL, wait_until="load", timeout=120000)
+                    await human_delay(3, 6)
+                    cookie_user_agent_list = dict()
+                    cookies = await self.wait_for_cookies(context, self.WATCH_COOKIES, timeout_s=25)
+                    for c in cookies:
+                        if c.get("name") in self.WATCH_COOKIES:
+                            self.cookies_data[c["name"]] = c.get("value")
+                            cookie_user_agent_list['cookie_value'] = c.get("value")
+                            cookie_user_agent_list['user_agent'] = ua
 
-                            cookies = await self.wait_for_cookies(context, WATCH_COOKIES, timeout_s=25)
-                            status = False
-                            for c in cookies:
-                                if c.get("name") in WATCH_COOKIES:
-                                    cookies_data[c["name"]] = c.get("value")
-                                    await self.save_cookie_to_redis(c.get("value"))
-
-                            cookie_header = self.cookies_to_header(cookies)
-                            result = {"cookies": cookies_data, "cookie_header": cookie_header, "raw_cookies": cookies}
-                            return self.build_response(True, result, 200)
-
-                        except PlaywrightTimeoutError as pwex:
-                            logger.warning(f"Attempt {attempt} timeout: {pwex}")
-                            if attempt == max_retries:
-                                return self.build_response(False, {"details": str(pwex)}, 103)
-                        except Exception as inner_ex:
-                            logger.exception(f"Attempt {attempt} error: {inner_ex}")
-                            if attempt == max_retries:
-                                return self.build_response(False, {"details": str(inner_ex)}, 103)
-
+                    result = {"cookies": self.cookies_data, "raw_cookies": cookies}
+                    with open("cookies.json", "a") as f:
+                        json.dump(cookie_user_agent_list, f, indent=4)
+                except Exception as e:
+                    logger.error(f"Navigation failed for UA:{e}")
                 finally:
                     await browser.close()
-        except Exception as ex:
-            logger.exception(f"Critical Error: {ex}")
-            return self.build_response(False, {"details": str(ex)}, 100)
+                    logger.info(f"Closed instance")
+
+
+async def main():
+    browser_name = "edge"
+    executor = UserAgentExecutor(browser_name, user_agent)
+    await executor.execute()
 
 
 if __name__ == "__main__":
-    fetcher = CookiesFetcher()
-    resp = asyncio.run(fetcher.get_cookies(max_retries=3, headless=False, use_proxy=True, save_local_json=True))
-    print(json.dumps(resp, indent=2))
+    asyncio.run(main())
+
+# "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.6668.90 Safari/537.36"

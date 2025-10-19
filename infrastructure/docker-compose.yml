@@ -149,6 +149,13 @@ services:
     ports:
       - "9000:9000"
 
+  ua-cookie-manager:
+    build:
+      context: ..
+      dockerfile: ua-cookie-manager/Dockerfiles.uacookiemanager
+    ports:
+      - "9001:9001"
+
 volumes:
   rabbitmq_data:
   redis_data:
