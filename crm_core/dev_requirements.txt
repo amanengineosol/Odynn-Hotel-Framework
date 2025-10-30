@@ -14,3 +14,4 @@ playwright
 pydoll-python
 aiohttp
 brotli
+seleniumbase

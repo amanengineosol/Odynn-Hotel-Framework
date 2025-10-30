@@ -61,6 +61,7 @@ def process_live_request(request_data):
             response = run_async(coro)
         else:
             # sync function; call directly
+            # response = func(hotel_id, check_in_date, check_out_date, int(guest_count))
             response = func(hotel_id, check_in_date, check_out_date, int(guest_count))
 
         # Normalize response structure and handle result

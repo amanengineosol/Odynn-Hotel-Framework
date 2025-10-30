@@ -1,8 +1,8 @@
 import random
 
-def get_random_sec_ch_headers(user_agents: list) -> dict:
+def get_random_sec_ch_headers(user_agent) -> dict:
 
-    user_agent = random.choice(user_agents)
+    # user_agent = random.choice(user_agents)
     ua = user_agent.lower()
 
     headers = {
@@ -14,7 +14,7 @@ def get_random_sec_ch_headers(user_agents: list) -> dict:
 
     # Chrome (but not Edge)
     if "chrome" in ua and "edg" not in ua:
-        version = user_agent.split("Chrome/")[1].split(".")[0]
+        version = user_agent.split("Chrome/")[0].split(".")
         if "windows" in ua:
             platform = '"Windows"'
         elif "macintosh" in ua or "mac os" in ua:
@@ -32,7 +32,7 @@ def get_random_sec_ch_headers(user_agents: list) -> dict:
 
     # Edge (Chromium-based)
     elif "edg" in ua:
-        version = user_agent.split("Edg/")[1].split(".")[0]
+        version = user_agent.split("Edg/")[0].split(".")
         if "windows" in ua:
             platform = '"Windows"'
         elif "macintosh" in ua or "mac os" in ua:
