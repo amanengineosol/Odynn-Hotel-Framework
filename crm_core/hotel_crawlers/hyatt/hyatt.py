@@ -30,7 +30,9 @@ if not logger.handlers:
 USER_AGENT_POOL = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
 ]
-
+# USER_AGENT_POOL = [
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
+# ]
 # DEFAULT_CHECK_IN_DATE = '2025-11-11'
 # DEFAULT_CHECK_OUT_DATE = '2025-11-14'
 BASE_URL = "https://www.hyatt.com/loyalty/en-US"
@@ -78,10 +80,6 @@ class HyattScraper:
             from .proxy_manager import ProxyManager
             return ProxyManager().fetch_proxy()
 
-            # Placeholder for the missing import/utility
-            # logger.warning("ProxyManager not imported. Using a dummy proxy string.")
-            # return "http://user:pass@dummy.proxy.com:8080"
-            # END Placeholder
         except NameError:
             logger.error("No proxy available: 'ProxyManager' is not defined.")
             raise Exception("No proxy available: 'ProxyManager' is not defined.")
@@ -288,7 +286,7 @@ class HyattScraper:
                     locale="en",
                     ad_block=True,
                     incognito=True,
-                    #proxy = self.proxy_url,
+                    proxy = self.proxy_url,
                     agent=self.selected_user_agent,
                     headless=True,
             ) as sb:
@@ -296,6 +294,7 @@ class HyattScraper:
 
                 # Navigate and Search
                 if not self._navigate_and_search():
+                    logger.info(f"Using {self.proxy_url} to navigate")
                     logger.error("Navigation or Search phase failed due to locator timeout.")
                     final_response = self.build_response(success=False, data=[], status_code=408, error_message="Navigation or Search failed due to locator timeout or missing element.")
                     return final_response
@@ -326,382 +325,9 @@ class HyattScraper:
 # --- EXECUTION ---
 
 if __name__ == '__main__':
-    scraper = HyattScraper(
-        check_in_date=DEFAULT_CHECK_IN_DATE,
-        check_out_date=DEFAULT_CHECK_OUT_DATE,
-        location="Hyatt Place Edmonton-West",
-        user_agent_pool=USER_AGENT_POOL
-    )
+    scraper = HyattScraper()
 
-    data = scraper.get_search_data()
+    data = scraper.get_search_data(hotel_id="ancza-Hyatt Place Edmonton-West", check_in_date="2025-11-12", check_out_date="2025-11-14")
     print("\n--- FINAL CLIENT RESPONSE ---")
     print(json.dumps(data, indent=4))
-
-# import random
-# import json
-# import time
-# import logging
-# import asyncio  # <-- New Import
-# from concurrent.futures import ThreadPoolExecutor  # <-- New Import
-#
-# from seleniumbase import SB
-# from selenium.webdriver.common.by import By
-# from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
-#
-# # --- SETUP LOGGING ---
-# logger = logging.getLogger('HyattScraper')
-# logger.setLevel(logging.INFO)  # Set to INFO for cleaner async output
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.INFO)
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# ch.setFormatter(formatter)
-# if not logger.handlers:
-#     logger.addHandler(ch)
-#
-# # --- CONFIGURATION (Global Constants) ---
-# USER_AGENT_POOL = [
-#     # ... (Original list content) ...
-#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
-# ]
-# DEFAULT_CHECK_IN_DATE = '2025-11-11'
-# DEFAULT_CHECK_OUT_DATE = '2025-11-14'
-# BASE_URL = "https://www.hyatt.com/loyalty/en-US"
-#
-#
-# # Note: ProxyManager import is assumed to be working locally:
-# # from proxy_manager import ProxyManager
-#
-# class HyattScraper:
-#     # --- Class Definition (Methods Unchanged, but Synchronous) ---
-#
-#     """
-#     Encapsulates all logic for scraping Hyatt room card data using SeleniumBase,
-#     now callable non-blockingly via asyncio.to_thread.
-#     """
-#
-#     def __init__(self, check_in_date, check_out_date, location, user_agent_pool):
-#         # Configuration
-#         self.check_in_date = check_in_date
-#         self.check_out_date = check_out_date
-#         self.location = location
-#         self.user_agent_pool = user_agent_pool
-#         self.selected_user_agent = random.choice(self.user_agent_pool)
-#         self.proxy_url = self._get_proxy()
-#
-#         # State
-#         self.structured_room_data = []
-#         self.sb = None
-#         logger.info(f"Scraper initialized for location: {location}")
-#         logger.debug(f"Using User-Agent: {self.selected_user_agent}")
-#         logger.debug(f"Using Proxy: {self.proxy_url}")
-#
-#     def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
-#         """Standardizes the response format for the client."""
-#         response = {
-#             "success": success,
-#             "data": data,
-#             "status_code": status_code
-#         }
-#         if error_message:
-#             response['error'] = error_message
-#         return response
-#
-#     def _get_proxy(self):
-#         """Fetches the proxy URL from the ProxyManager utility."""
-#         try:
-#             # Assuming ProxyManager is available and working
-#             from proxy_manager import ProxyManager
-#             return ProxyManager().fetch_proxy()
-#
-#             # Placeholder for the missing import/utility
-#             # logger.warning("ProxyManager not imported. Using a dummy proxy string.")
-#             # return "http://user:pass@dummy.proxy.com:8080"
-#             # END Placeholder
-#         except NameError:
-#             logger.error("No proxy available: 'ProxyManager' is not defined.")
-#             raise Exception("No proxy available: 'ProxyManager' is not defined.")
-#
-#     # Note: _parse_room_cards_html, _safe_click, _safe_type, _navigate_and_search, _extract_html_and_parse
-#     #       (the synchronous logic methods) are kept exactly as in the previous working version.
-#     #       (Their full code is omitted here for brevity, assuming they are present.)
-#
-#     def _parse_room_cards_html(self, html_content: str) -> list:
-#         # ... (synchronous parsing logic with self.sb.find_elements etc. - KEPT INTACT) ...
-#         # (The implementation is the same as the previous response)
-#         if not self.sb:
-#             logger.error("SeleniumBase instance is not initialized for parsing.")
-#             return []
-#
-#         logger.info("Starting HTML content parsing...")
-#         structured_data = []
-#
-#         try:
-#             self.sb.set_content(html_content)
-#             self.sb.sleep(0.5)
-#
-#             room_cards = self.sb.find_elements(".room-rate-card-wrapper")
-#             logger.info(f"Found {len(room_cards)} room cards for parsing.")
-#
-#             for card in room_cards:
-#                 room = {}
-#                 try:
-#                     # 1. Room Type Code
-#                     room['room_type_code'] = card.get_attribute("data-room-type-code") or 'N/A'
-#                     # 2. Room Title
-#                     room['title'] = card.find_element(By.CSS_SELECTOR, ".room-title").text
-#                     # 3. Description
-#                     room['description'] = card.find_element(By.CSS_SELECTOR, ".truncate-text.room_description").text
-#                     # 4. Image URL
-#                     try:
-#                         room['image_url'] = card.find_element(By.CSS_SELECTOR,
-#                                                               ".room-card-carousel-wrapper img").get_attribute("src")
-#                     except NoSuchElementException:
-#                         room['image_url'] = 'No Image Found'
-#                         logger.debug(f"No image found for room code: {room['room_type_code']}")
-#                     # 5. Rate Type
-#                     room['rate_type'] = card.find_element(By.CSS_SELECTOR,
-#                                                           ".room-rate-content.points-rate span.b-col-7").text
-#                     # 6. Rate Value
-#                     room['point_value'] = card.find_element(By.CSS_SELECTOR,
-#                                                             ".room-rate-content.points-rate > span:last-child").text
-#
-#                     structured_data.append(room)
-#                 except Exception as e:
-#                     logger.warning(f"Failed to parse a room card. Skipping. Error: {e}")
-#                     continue
-#
-#         except Exception as e:
-#             logger.error(f"Critical error during HTML parsing setup: {e}")
-#             structured_data = []
-#
-#         self.sb.set_content("")  # Clear temporary content
-#         logger.info("HTML parsing complete.")
-#         return structured_data
-#
-#     def _safe_click(self, selector: str, description: str, sleep_time: float = 1.0):
-#         # ... (synchronous click logic with sb.click/sb.sleep - KEPT INTACT) ...
-#         try:
-#             self.sb.click(selector)
-#             logger.debug(f"Successfully clicked: {description} ({selector})")
-#             self.sb.sleep(sleep_time)
-#             return True
-#         except TimeoutException:
-#             logger.error(f"Timeout clicking element: {description} ({selector}). Page state check needed.")
-#             return False
-#         except Exception as e:
-#             logger.error(f"General error clicking element: {description} ({selector}). Error: {e}")
-#             return False
-#
-#     def _safe_type(self, selector: str, text: str, description: str, sleep_time: float = 1.0):
-#         # ... (synchronous type logic with sb.type/sb.sleep - KEPT INTACT) ...
-#         try:
-#             self.sb.type(selector, text)
-#             logger.debug(f"Successfully typed '{text}' into: {description} ({selector})")
-#             self.sb.sleep(sleep_time)
-#             return True
-#         except TimeoutException:
-#             logger.error(f"Timeout typing into element: {description} ({selector}).")
-#             return False
-#         except Exception as e:
-#             logger.error(f"General error typing into element: {description} ({selector}). Error: {e}")
-#             return False
-#
-#     def _navigate_and_search(self):
-#         # ... (synchronous navigation logic with sb.activate_cdp_mode, sb.sleep, sb.click, etc. - KEPT INTACT) ...
-#         url = BASE_URL
-#         logger.info(f"Navigating to base URL: {url}")
-#         try:
-#             self.sb.activate_cdp_mode(url)
-#             self.sb.sleep(3.5)
-#         except WebDriverException as e:
-#             logger.critical(f"Failed to navigate or activate CDP mode. Check network/proxy. Error: {e}")
-#             return self.build_response(success=False, data=None, status_code=503,
-#                                        error_message="Navigation failed. Check browser setup or network.")
-#
-#         # 2. Handle popups and cookies
-#         self.sb.click_if_visible('button[aria-label="Close"]', timeout=3)
-#         self.sb.click_if_visible("#onetrust-reject-all-handler", timeout=3)
-#         self.sb.sleep(1)
-#
-#         # 3. Set Location
-#         if not self._safe_click('input[id="search-term"]', "Search Term Input"): return False
-#         self.sb.sleep(1)
-#         if not self._safe_type('input[id="search-term"]', self.location, "Location Text"): return False
-#         self.sb.sleep(3)
-#         if not self._safe_click('li[data-js="suggestion"]', "Location Suggestion"): return False
-#         self.sb.sleep(1)
-#
-#         # 4. Set Dates and Loyalty (Shadow DOM interaction)
-#         logger.info(f"Setting Check-in Date to {self.check_in_date}")
-#         try:
-#             self.sb.execute_script(f"""
-#                 document.querySelector("#qb-form-container > div > form > div.quickbook-form_datePicker__gU5Ll > be-datepicker")
-#                     .shadowRoot.querySelector("#checkin-date").value = '{self.check_in_date}'
-#             """)
-#             self.sb.sleep(1)
-#         except Exception as e:
-#             logger.error(f"Failed to set check-in date via JS (Shadow DOM). Error: {e}")
-#             return False
-#
-#         logger.info(f"Setting Check-out Date to {self.check_out_date}")
-#         try:
-#             self.sb.execute_script(f"""
-#                 document.querySelector("#qb-form-container > div > form > div.quickbook-form_datePicker__gU5Ll > be-datepicker")
-#                     .shadowRoot.querySelector("#checkout-date").value = '{self.check_out_date}'
-#             """)
-#             self.sb.sleep(3)
-#         except Exception as e:
-#             logger.error(f"Failed to set check-out date via JS (Shadow DOM). Error: {e}")
-#             return False
-#
-#         # 5. Select "Use Points" checkbox
-#         logger.info("Selecting 'Use Points' checkbox.")
-#         try:
-#             self.sb.execute_script("""
-#                 const checkbox = document.querySelector('be-checkbox[name="use-points"]');
-#                 if (checkbox) {
-#                     checkbox.checked = true;
-#                     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-#                 }
-#             """)
-#             self.sb.sleep(1)
-#         except Exception as e:
-#             logger.warning(f"Failed to check 'Use Points' via JS. Proceeding anyway. Error: {e}")
-#
-#         # 6. Click Search
-#         logger.info("Clicking 'Find Hotels' button...")
-#         if not self._safe_click("button.be-button-shop", "Find Hotels Button", sleep_time=6): return False
-#
-#         # 7. Ensure all rooms are loaded by scrolling
-#         logger.info("Scrolling to ensure dynamic content loads...")
-#         self.sb.scroll_to_bottom()
-#         self.sb.sleep(5)
-#         return True
-#
-#     def _extract_html_and_parse(self):
-#         # ... (synchronous extraction logic with sb.slow_scroll_to, sb.get_attribute, etc. - KEPT INTACT) ...
-#         SCROLL_TARGET_ID = "#room-cards-section-panel"
-#         HTML_EXTRACTION_SELECTOR = "#room-cards-section-panel .room-cards"
-#         room_cards_html = None
-#
-#         try:
-#             logger.info(f"Attempting to scroll to final target: {SCROLL_TARGET_ID}")
-#             # Use slow scroll to ensure the element is loaded/visible
-#             self.sb.slow_scroll_to(SCROLL_TARGET_ID)
-#             logger.info("Successfully scrolled to the room cards section.")
-#             self.sb.sleep(3)
-#
-#             # Get the HTML content of the target element
-#             room_cards_html = self.sb.get_attribute(HTML_EXTRACTION_SELECTOR, "outerHTML")
-#             logger.info(f"Successfully retrieved HTML. Length: {len(room_cards_html)} characters.")
-#
-#             # PARSING STEP
-#             if room_cards_html:
-#                 self.structured_room_data = self._parse_room_cards_html(room_cards_html)
-#                 logger.info(f"Parsed {len(self.structured_room_data)} structured room entries.")
-#
-#         except (TimeoutException, NoSuchElementException) as e:
-#             logger.error(f"HTML extraction failed. Element '{SCROLL_TARGET_ID}' not found after scroll. Error: {e}")
-#             # Do not re-raise, allow flow to continue to return empty data
-#
-#         except Exception as e:
-#             logger.critical(f"Critical error during HTML extraction: {e}")
-#             # Do not re-raise, allow flow to continue to return empty data
-#
-#     def _synchronous_search_logic(self):
-#         """
-#         The main synchronous method that encapsulates the entire scraping run.
-#         This is the method that will be executed in a separate thread.
-#         """
-#         final_response = self.build_response(success=False, data=[], status_code=500,
-#                                              error_message="Scraping process did not complete successfully.")
-#
-#         try:
-#             # Initialize SeleniumBase
-#             with SB(
-#                     uc=True, test=True, locale="en", ad_block=True, incognito=True,
-#                     proxy=self.proxy_url, agent=self.selected_user_agent, headless=True,
-#             ) as sb:
-#                 self.sb = sb
-#
-#                 # Navigate and Search
-#                 if not self._navigate_and_search():
-#                     logger.error("Navigation or Search phase failed due to locator timeout.")
-#                     final_response = self.build_response(success=False, data=[], status_code=408,
-#                                                          error_message="Navigation or Search failed due to locator timeout or missing element.")
-#                     return final_response
-#
-#                 # Extract and Parse
-#                 self._extract_html_and_parse()
-#
-#                 # Final sleep before closing the browser
-#                 self.sb.sleep(3)
-#
-#         except Exception as e:
-#             # Catches exceptions during SB initialization or in the `with` block
-#             logger.critical(f"A fatal error occurred during the scraping process: {e}")
-#             final_response = self.build_response(success=False, data=[], status_code=500,
-#                                                  error_message=f"A fatal exception occurred: {type(e).__name__}")
-#             return final_response
-#
-#         # Build Final Successful/Unsuccessful Response
-#         if self.structured_room_data:
-#             logger.info("Data extraction successful. Returning 200.")
-#             final_response = self.build_response(success=True, data=self.structured_room_data, status_code=200)
-#         else:
-#             logger.warning("Scraping completed, but no room data was extracted.")
-#             final_response = self.build_response(success=False, data=[], status_code=204,
-#                                                  error_message="Search successful, but no room data found for the criteria.")
-#
-#         return final_response
-#
-#     async def get_search_data(self):
-#         """
-#         The public asynchronous method that runs the synchronous scraping logic
-#         in a separate thread using asyncio.to_thread.
-#         """
-#         logger.info(f"Starting ASYNC execution for {self.location}...")
-#
-#         # Use asyncio.to_thread to run the blocking code (Selenium) without
-#         # freezing the main asyncio event loop.
-#         loop = asyncio.get_event_loop()
-#         return await loop.run_in_executor(None, self._synchronous_search_logic)
-#         # OR: return await asyncio.to_thread(self._synchronous_search_logic)
-#         # (preferred in Python 3.9+)
-#
-#
-# # --- ASYNC EXECUTION ENTRY POINT ---
-#
-# async def main():
-#     """Demonstrates running the synchronous scraper non-blockingly."""
-#
-#     # Example 1: Single run
-#     scraper1 = HyattScraper(
-#         check_in_date=DEFAULT_CHECK_IN_DATE,
-#         check_out_date=DEFAULT_CHECK_OUT_DATE,
-#         location="Hyatt Place Edmonton-West",
-#         user_agent_pool=USER_AGENT_POOL
-#     )
-#
-#     logger.info("Starting single, non-blocking scraper job...")
-#     data1 = await scraper1.get_search_data()
-#     logger.info("Single scraper job complete.")
-#
-#     print("\n--- FINAL CLIENT RESPONSE (Single Job) ---")
-#     print(json.dumps(data1, indent=4))
-#
-#     # Example 2: Concurrent runs (If you had multiple locations/proxies/agents)
-#     # The true benefit of asyncio.to_thread is seen here.
-#
-#     # scraper2 = HyattScraper(...)
-#     # scraper3 = HyattScraper(...)
-#
-#     # jobs = [scraper2.get_search_data(), scraper3.get_search_data()]
-#     # results = await asyncio.gather(*jobs)
-#     # print("\n--- FINAL CLIENT RESPONSE (Concurrent Jobs) ---")
-#     # print(json.dumps(results, indent=4))
-#
-#
-# if __name__ == '__main__':
-#     # Execute the main async function
-#     asyncio.run(main())
+    
