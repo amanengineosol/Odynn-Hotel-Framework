@@ -13,6 +13,8 @@ hotel_exchange = Exchange('Hotel', type='direct')
 celery_app.conf.task_queues = [
     Queue('Hyatt', hotel_exchange, routing_key='Hyatt'),
     Queue('Marriott', hotel_exchange, routing_key='Marriott'),
+    Queue('Ihg', hotel_exchange, routing_key='Ihg'),
+
     Queue('celery')  # default queue as fallback
 ]
 

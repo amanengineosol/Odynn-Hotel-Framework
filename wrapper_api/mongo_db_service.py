@@ -1,7 +1,8 @@
 from pymongo import MongoClient
 from datetime import datetime, timezone
 import os
-
+from dotenv import load_dotenv
+load_dotenv()
 
 
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME')

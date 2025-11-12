@@ -35,6 +35,7 @@ HOTEL_MAP = {}
 CRAWLER_DOMAIN_MAP = {
     "Hyatt": "Hyatt",
     "Marriott": "Marriott",
+    "Ihg": "Ihg"
 }
 
 

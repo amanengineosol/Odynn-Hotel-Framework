@@ -95,11 +95,41 @@ services:
       DJANGO_SETTINGS_MODULE: crm_core.settings.development
     restart: unless-stopped
 
-  celery_worker_marriott:
+#  celery_worker_marriott:
+#    build:
+#      context: ..
+#      dockerfile: crm_core/Dockerfile.marriott_consumer
+#    container_name: marriott_consumer
+#    depends_on:
+#      rabbitmq:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    environment:
+#      DJANGO_SETTINGS_MODULE: crm_core.settings.development
+#    restart: unless-stopped
+#    command: ["celery", "-A", "crm_core", "worker", "-n", "marriott_worker", "-Q", "Marriott", "--loglevel=INFO"]
+
+#  celery_worker_hyatt:
+#    build:
+#      context: ..
+#      dockerfile: crm_core/Dockerfile.hyatt_consumer
+#    container_name: hyatt_consumer
+#    depends_on:
+#      rabbitmq:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    environment:
+#      DJANGO_SETTINGS_MODULE: crm_core.settings.development
+#    restart: unless-stopped
+#    command: [ "celery", "-A", "crm_core", "worker", "-n", "hyatt_worker", "-Q", "Hyatt", "--loglevel=INFO" ]
+
+  celery_worker_ihg:
     build:
       context: ..
-      dockerfile: crm_core/Dockerfile.marriott_consumer
-    container_name: marriott_consumer
+      dockerfile: crm_core/Dockerfile.ihg_consumer
+    container_name: ihg_consumer
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -108,38 +138,24 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: crm_core.settings.development
     restart: unless-stopped
-    command: ["celery", "-A", "crm_core", "worker", "-n", "marriott_worker", "-Q", "Marriott", "--loglevel=INFO"]
+    command: [ "celery", "-A", "crm_core", "worker", "-n", "ihg_worker", "-Q", "Ihg", "--loglevel=INFO" ]
 
-  celery_worker_hyatt:
-    build:
-      context: ..
-      dockerfile: crm_core/Dockerfile.hyatt_consumer
-    container_name: hyatt_consumer
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      DJANGO_SETTINGS_MODULE: crm_core.settings.development
-    restart: unless-stopped
-    command: [ "celery", "-A", "crm_core", "worker", "-n", "hyatt_worker", "-Q", "Hyatt", "--loglevel=INFO" ]
 
-  flower:
-    build:
-      context: ..
-      dockerfile: crm_core/Dockerfile.flower
-    container_name: flower
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    ports:
-      - "5555:5555"
-    environment:
-      CELERY_BROKER_URL: "amqp://admin:Pass123@rabbitmq:5672//"
-    restart: unless-stopped
+  #  flower:
+#    build:
+#      context: ..
+#      dockerfile: crm_core/Dockerfile.flower
+#    container_name: flower
+#    depends_on:
+#      rabbitmq:
+#        condition: service_healthy
+#      redis:
+#        condition: service_healthy
+#    ports:
+#      - "5555:5555"
+#    environment:
+#      CELERY_BROKER_URL: "amqp://admin:Pass123@rabbitmq:5672//"
+#    restart: unless-stopped
 
   nginx:
     build:
