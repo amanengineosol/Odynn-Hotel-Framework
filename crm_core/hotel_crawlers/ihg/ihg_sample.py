@@ -28,9 +28,9 @@ class ExtractIhg:
         self._proxy_fetcher = ProxyManager()
         browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
         self._headers = headers
-        self._sec_headers_flag = False
+        self.sec_headers_flag = False
         if browser_family not in ("firefox", "webkit"):
-            self._sec_headers_flag = True
+            self.sec_headers_flag = True
 
     def build_response(self, success: bool, data: any, status_code: int):
         return {
@@ -105,7 +105,7 @@ class ExtractIhg:
                 preLocationUrl = f"https://apis.ihg.com/locations/v1/destinations?destination={encoded_hotel_name}&ihg-language=en-US&chainCode=6c"
                 session.headers.pop('upgrade-insecure-requests')
                 session.headers.pop('sec-fetch-user')
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.pop('sec-ch-ua')
                     session.headers.pop('sec-ch-ua-mobile')
                     session.headers.pop('sec-ch-ua-platform')
@@ -135,7 +135,7 @@ class ExtractIhg:
                 locationUrl = preLocationUrl
                 session.headers.pop('access-control-request-method')
                 session.headers.pop('access-control-request-headers')
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.update({
                         'sec-ch-ua-platform': self._headers['sec-ch-ua-platform'],
                         'sec-ch-ua': self._headers['sec-ch-ua'],
@@ -158,24 +158,18 @@ class ExtractIhg:
                     logger.info(f"Location search succeeded with status code: {locationResponse.status_code}")
                     if '"No destination found"' in locationResponse.text:
                         message = {
-                            "details": f"No destination found at input location {hotel_id_name}",
+                            "details": f"No destination found at input location {hotel_name}",
                         }
-                        return self.build_response(success=False, data=message, status_code=locationResponse.status_code)
-                    try:
-                        latitude = locationResponse.json()[0]['latitude']
-                        longitude = locationResponse.json()[0]['longitude']
-                        clarifiedLocation = locationResponse.json()[0]['clarifiedLocation']
-                        locationType = locationResponse.json()[0]['type']
-                    except Exception as e:
-                        message = {
-                            "details": f"Response Json not available at location search: {e}"
-                        }
-                        return self.build_response(success=False, data=message, status_code=locationResponse.status_code)
+                        return self.build_response(success=True, data=message, status_code=locationResponse.status_code)
+                    latitude = locationResponse.json()[0]['latitude']
+                    longitude = locationResponse.json()[0]['longitude']
+                    clarifiedLocation = locationResponse.json()[0]['clarifiedLocation']
+                    locationType = locationResponse.json()[0]['type']
 
                 ############ New Req 4 ##################
                 logger.info("Pre hotel search Requested....")
                 preHotelUrl = "https://apis.ihg.com/graphql/v1/hotels"
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.pop('sec-ch-ua')
                     session.headers.pop('sec-ch-ua-mobile')
                     session.headers.pop('sec-ch-ua-platform')
@@ -200,6 +194,7 @@ class ExtractIhg:
                 ############ New Req 5 ##################
                 logger.info("Hotel search Requested....")
                 hotelUrl = preHotelUrl
+                # hotelpayloadSample = "{\r\n    \"operationName\": \"GetHotelDetails\",\r\n    \"variables\": {\r\n        \"detailsInput\": {\r\n            \"geoLocation\": {\r\n                \"lat\": 40.757996,\r\n                \"lon\": -73.985626,\r\n                \"radius\": 30\r\n            },\r\n            \"geoLocationDistance\": {\r\n                \"distanceType\": \"STRAIGHT_LINE\",\r\n                \"distanceUnit\": \"MI\"\r\n            },\r\n            \"size\": 120,\r\n            \"fallbackSearch\": {\r\n                \"minHotels\": 1,\r\n                \"maxRadius\": 100,\r\n                \"incrementRadiusBy\": 70\r\n            },\r\n            \"sortBy\": \"DISTANCE\"\r\n        },\r\n        \"mediaArgs\": {\r\n            \"formats\": [\r\n                {\r\n                    \"aspectHeight\": \"3\",\r\n                    \"aspectWidth\": \"4\"\r\n                },\r\n                {\r\n                    \"aspectHeight\": \"5\",\r\n                    \"aspectWidth\": \"16\"\r\n                }\r\n            ]\r\n        }\r\n    },\r\n    \"query\": \"query GetHotelDetails($detailsInput:HotelArgs$mediaArgs:MediaArgs){getHotels(input:$detailsInput){hotelInfo{hotelCode address{street1 street2 street3 city zip state{code name}country{name code}}location{boardTypes{boardType}}distanceFrom{kilometers miles}marketing{optOutDateWeb optInDateWeb marketingText{welcomeMessage}}brandInfo{SPBrandName brandCode brandName chainCode futureBrandInfo{rebrandingDate hotelName chainCode brandName brandCode}spTransitionalBrandIdentifier}greenEngage{certificationPrograms{certifiedByGloballyRecognizedSustainableProgram environmentalCertificationProgram{listItem}}lowCarbon{lowCarbonHotelDescription isLowCarbonHotel}lowCarbonReady{lowCarbonReadyHotelDescription isLowCarbonReadyHotel}}room{hotelHighlights{hotelDisclaimer}}badges{name id}facilities{name id}parking{complimentaryDailySelfParking parkingDescription carParkingAvailable valetParkingAvailable}policies{pet{petsAllowed guideDogsOrServiceAnimalsAllowed description}}stripes{id name}renovationAlertsList{alertType flagEndDate flagStartDate other}profile{name webNonBrandedHotelLogo{url}seoCity nonIhgCrsUrl hotelLogo{originalUrl}averageReview tpiLevel2Violator primaryImageUrl{originalUrl}latLong{lon lat}hotelStatus preSellDate dateOpened totalReviews vatIncluded}media(input:$mediaArgs){primaryPhotos{allPhotos{type primary caption originalUrl formats{url aspectHeight aspectWidth}}}}foodAndBeverage{complimentaryBreakfastDetails{complimentaryGrabAndGoBreakfast}}restaurant{onSiteRestaurantsCount}tax{taxAndFeeDetail serviceCharge{startAndEndDate{startDate endDate}description}}}}}\"\r\n}"
                 hotelpayload_dict = {
                     "operationName": "GetHotelDetails",
                     "variables": {
@@ -251,7 +246,7 @@ class ExtractIhg:
                 hotelpayload = json.dumps(hotelpayload_dict)
                 session.headers.pop('access-control-request-method')
                 session.headers.pop('access-control-request-headers')
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.update({
                         'sec-ch-ua-platform': self._headers['sec-ch-ua-platform'],
                         'sec-ch-ua': self._headers['sec-ch-ua'],
@@ -273,22 +268,15 @@ class ExtractIhg:
                     logger.info(f"Hotel search succeeded with status code: {hotelResponse.status_code}")
                     if '"hotelCode"' not in hotelResponse.text:
                         message = {
-                            "details": f"Hotel not found at input location {hotel_id_name}",
+                            "details": f"Hotel not found at input location {hotel_name}",
                         }
-                        return self.build_response(success=False, data=message, status_code=hotelResponse.status_code)
-                    try:
-                        hotels = hotelResponse.json()["data"]["getHotels"]["hotelInfo"]
-                        hotel_codes = [hotel["hotelCode"] for hotel in hotels]
-                    except Exception as e:
-                        message = {
-                            "details": f"Response Json not available at hotel search: {e}"
-                        }
-                        return self.build_response(success=False, data=message, status_code=hotelResponse.status_code)
+                        return self.build_response(success=True, data=message, status_code=hotelResponse.status_code)
+
 
                 ############ New Req 6 ##################
                 logger.info("Pre list data search Requested....")
                 preListDataUrl = "https://apis.ihg.com/availability/v3/hotels/offers?fieldset=summary,summary.rateRanges"
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.pop('sec-ch-ua')
                     session.headers.pop('sec-ch-ua-mobile')
                     session.headers.pop('sec-ch-ua-platform')
@@ -312,43 +300,10 @@ class ExtractIhg:
                 ############ New Req 7 ##################
                 logger.info("List data search Requested....")
                 listDataUrl = preListDataUrl
-                listDatapayload_dict = {
-                    "hotelMnemonics": hotel_codes,
-                    "radius": None,
-                    "maxRadius": None,
-                    "minHotels": 1,
-                    "incrementRadiusBy": None,
-                    "distanceUnit": "MI",
-                    "distanceType": "STRAIGHT_LINE",
-                    "startDate": check_in_date,
-                    "endDate": check_out_date,
-                    "geoLocation": None,
-                    "products": [
-                        {
-                            "productCode": "SR",
-                            "startDate": check_in_date,
-                            "endDate": check_out_date,
-                            "quantity": 1,
-                            "guestCounts": [
-                                {"otaCode": "AQC10", "count": 1}
-                            ]
-                        }
-                    ],
-                    "rates": {
-                        "ratePlanCodes": [
-                            {"internal": "IVAN1"},
-                            {"internal": "IVAN3"},
-                            {"internal": "IVAN5"},
-                            {"internal": "IVAN6"},
-                            {"internal": "IVAN7"},
-                            {"internal": "IVANI"},
-                        ]
-                    }
-                }
-                listDatapayload = json.dumps(listDatapayload_dict)
+                listDatapayload = "{\r\n    \"hotelMnemonics\": [\r\n        \"NYCXV\",\r\n        \"NYCHC\",\r\n        \"NYCEA\",\r\n        \"NYCDD\",\r\n        \"NYCAT\",\r\n        \"NYCMA\",\r\n        \"NYCCW\",\r\n        \"NYCWS\",\r\n        \"NYCPC\",\r\n        \"NYCVM\",\r\n        \"NYCTS\",\r\n        \"NYCTT\",\r\n        \"NYCHK\",\r\n        \"NYCPK\",\r\n        \"NYCHA\",\r\n        \"NYCAA\",\r\n        \"NYCNY\",\r\n        \"NYCEV\",\r\n        \"NYCVC\",\r\n        \"NYCVO\",\r\n        \"NYCIS\",\r\n        \"NYCOS\",\r\n        \"NYCES\",\r\n        \"NYCEX\",\r\n        \"JERCY\",\r\n        \"NYCAS\",\r\n        \"NYCMP\",\r\n        \"NYCMF\",\r\n        \"EWRCJ\",\r\n        \"NYCWL\",\r\n        \"NYCGO\",\r\n        \"NYCSF\",\r\n        \"NYCNJ\",\r\n        \"NYCWD\",\r\n        \"MPENY\",\r\n        \"LGABR\",\r\n        \"BXYEV\",\r\n        \"NYCFL\",\r\n        \"CSTNJ\",\r\n        \"BXYSP\",\r\n        \"NYCLF\",\r\n        \"NYCFQ\",\r\n        \"NYCBA\",\r\n        \"HASNJ\",\r\n        \"ENGNJ\",\r\n        \"NYCBK\",\r\n        \"NYCAV\",\r\n        \"EWRHL\",\r\n        \"NYCJC\",\r\n        \"MFHAM\",\r\n        \"SADNJ\",\r\n        \"EWRZB\",\r\n        \"EWRSP\",\r\n        \"HPNNR\",\r\n        \"LDJNJ\",\r\n        \"CLKNJ\",\r\n        \"NYCWB\",\r\n        \"EWRWB\",\r\n        \"PASNJ\",\r\n        \"RAMNJ\",\r\n        \"HSKNJ\",\r\n        \"HPNHY\",\r\n        \"NYCMW\",\r\n        \"HZTNJ\",\r\n        \"SUFNY\",\r\n        \"EDSCP\",\r\n        \"NYCPV\",\r\n        \"PNFNJ\",\r\n        \"EBKNJ\"\r\n    ],\r\n    \"radius\": null,\r\n    \"maxRadius\": null,\r\n    \"minHotels\": 1,\r\n    \"incrementRadiusBy\": null,\r\n    \"distanceUnit\": \"MI\",\r\n    \"distanceType\": \"STRAIGHT_LINE\",\r\n    \"startDate\": \"2025-12-25\",\r\n    \"endDate\": \"2025-12-28\",\r\n    \"geoLocation\": null,\r\n    \"products\": [\r\n        {\r\n            \"productCode\": \"SR\",\r\n            \"startDate\": \"2025-12-25\",\r\n            \"endDate\": \"2025-12-28\",\r\n            \"quantity\": 1,\r\n            \"guestCounts\": [\r\n                {\r\n                    \"otaCode\": \"AQC10\",\r\n                    \"count\": 1\r\n                }\r\n            ]\r\n        }\r\n    ],\r\n    \"rates\": {\r\n        \"ratePlanCodes\": [\r\n            {\r\n                \"internal\": \"IVAN1\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN3\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN5\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN6\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN7\"\r\n            },\r\n            {\r\n                \"internal\": \"IVANI\"\r\n            }\r\n        ]\r\n    }\r\n}"
                 session.headers.pop('access-control-request-method')
                 session.headers.pop('access-control-request-headers')
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.update({
                         'sec-ch-ua-platform': self._headers['sec-ch-ua-platform'],
                         'sec-ch-ua': self._headers['sec-ch-ua'],
@@ -373,7 +328,7 @@ class ExtractIhg:
                 ############ New Req 8 ##################
                 logger.info("Pre hotel detail search Requested....")
                 preHotelDetailUrl = "https://apis.ihg.com/availability/v3/hotels/offers?fieldset=rateDetails,rateDetails.policies,rateDetails.bonusRates,rateDetails.upsells,alternatePayments"
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.pop('sec-ch-ua')
                     session.headers.pop('sec-ch-ua-mobile')
                     session.headers.pop('sec-ch-ua-platform')
@@ -398,37 +353,10 @@ class ExtractIhg:
                 ############ New Req 9 ##################
                 logger.info("Hotel detail search Requested....")
                 hotelDetailUrl = preHotelDetailUrl
-                rate_plan_codes = ["IVAN1", "IVAN3", "IVAN5", "IVAN6", "IVAN7", "IVANI"]
-                hotelDetailpayload_dict = {
-                    "startDate": check_in_date,
-                    "endDate": check_out_date,
-                    "hotelMnemonics": [hotel_codes[0]],
-                    "rates": {
-                        "ratePlanCodes": [{"internal": code} for code in rate_plan_codes]
-                    },
-                    "products": [
-                        {
-                            "productCode": "SR",
-                            "startDate": check_in_date,
-                            "endDate": check_out_date,
-                            "quantity": 1,
-                            "guestCounts": [
-                                {"otaCode": "AQC10", "count": 1}
-                            ]
-                        }
-                    ],
-                    "options": {
-                        "disabilityMode": "ACCESSIBLE_AND_NON_ACCESSIBLE",
-                        "returnAdditionalRatePlanDescriptions": True,
-                        "rateDetails": {
-                            "includePackageDetails": True
-                        }
-                    }
-                }
-                hotelDetailpayload = json.dumps(hotelDetailpayload_dict)
+                hotelDetailpayload = "{\r\n    \"startDate\": \"2025-12-25\",\r\n    \"endDate\": \"2025-12-28\",\r\n    \"hotelMnemonics\": [\r\n        \"NYCHC\"\r\n    ],\r\n    \"rates\": {\r\n        \"ratePlanCodes\": [\r\n            {\r\n                \"internal\": \"IVAN1\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN3\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN5\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN6\"\r\n            },\r\n            {\r\n                \"internal\": \"IVAN7\"\r\n            },\r\n            {\r\n                \"internal\": \"IVANI\"\r\n            }\r\n        ]\r\n    },\r\n    \"products\": [\r\n        {\r\n            \"productCode\": \"SR\",\r\n            \"startDate\": \"2025-12-25\",\r\n            \"endDate\": \"2025-12-28\",\r\n            \"quantity\": 1,\r\n            \"guestCounts\": [\r\n                {\r\n                    \"otaCode\": \"AQC10\",\r\n                    \"count\": 1\r\n                }\r\n            ]\r\n        }\r\n    ],\r\n    \"options\": {\r\n        \"disabilityMode\": \"ACCESSIBLE_AND_NON_ACCESSIBLE\",\r\n        \"returnAdditionalRatePlanDescriptions\": true,\r\n        \"rateDetails\": {\r\n            \"includePackageDetails\": true\r\n        }\r\n    }\r\n}"
                 session.headers.pop('access-control-request-method')
                 session.headers.pop('access-control-request-headers')
-                if self._sec_headers_flag:
+                if self.sec_headers_flag:
                     session.headers.update({
                         'sec-ch-ua-platform': self._headers['sec-ch-ua-platform'],
                         'sec-ch-ua': self._headers['sec-ch-ua'],
@@ -458,7 +386,7 @@ class ExtractIhg:
                         return self.build_response(success=True, data=data_json, status_code=hotelDetailResponse.status_code)
                     except Exception as e:
                         message = {
-                            "details": f"Response Json not available at hotel detail search: {e}"
+                            "details": f"Response Json not available {e}"
                         }
                         return self.build_response(success=False, data=message, status_code=hotelDetailResponse.status_code)
 
@@ -477,7 +405,7 @@ class ExtractIhg:
 if __name__ == "__main__":
     crawl = ExtractIhg()
     data = crawl.get_search_data(
-        hotel_id="nagariya",
+        hotel_id="new york",
         check_in_date="2026-01-28",
         check_out_date="2026-01-29",
         guest_count=1
