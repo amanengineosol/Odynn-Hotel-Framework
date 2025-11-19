@@ -54,6 +54,11 @@ async def load_hotel_map():
         for row in marriott_reader:
             h_id = str(row['hotel_id']).lower()
             HOTEL_MAP[h_id] = row['combined']
+    with open("hotel_ihg_mappings.csv", mode="r", encoding="utf-8") as ihg_mapping:
+        ihg_reader = csv.DictReader(ihg_mapping)
+        for row in ihg_reader:
+            h_id = str(row['hotel_id']).lower()
+            HOTEL_MAP[h_id] = row['combined']
     print("HOTEL Mapping Done....................######################################## ")
 
 

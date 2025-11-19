@@ -1,0 +1,374 @@
+import random
+import json
+import time
+import logging
+from datetime import datetime
+
+import sbase.steps
+from seleniumbase import SB
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+
+# --- SETUP LOGGING ---
+# Configure the logger for the module
+logger = logging.getLogger('MarriottScraper')
+logger.setLevel(logging.DEBUG)
+
+# Create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# Create formatter and add it to the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+
+# Add the handler to the logger
+if not logger.handlers:
+    logger.addHandler(ch)
+
+# --- CONFIGURATION (Global Constants) ---
+
+USER_AGENT_POOL = [
+    # ... (Original list content) ...
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+]
+
+DEFAULT_CHECK_IN_DATE = '2025-11-11'
+DEFAULT_CHECK_OUT_DATE = '2025-11-14'
+BASE_URL = "https://www.marriott.com/"
+
+
+# Note: ProxyManager import is assumed to be working locally:
+# from .proxy_manager import ProxyManager
+
+class MarriottScraper:
+    """
+    Encapsulates all logic for scraping Hyatt room card data using SeleniumBase,
+    with robust logging and exception handling.
+    """
+
+    def __init__(self, check_in_date, check_out_date, location, user_agent_pool):
+        # Configuration
+        self.check_in_date = check_in_date
+        self.check_out_date = check_out_date
+        self.location = location
+        self.user_agent_pool = user_agent_pool
+        self.selected_user_agent = random.choice(self.user_agent_pool)
+        self.proxy_url = self._get_proxy()
+
+        # State
+        self.structured_room_data = []
+        self.sb = None
+        logger.info(f"Scraper initialized for location: {location}")
+        logger.debug(f"Using User-Agent: {self.selected_user_agent}")
+        logger.debug(f"Using Proxy: {self.proxy_url}")
+
+    def windows_format_marriott_date(self, dt_str):
+        dt = datetime.strptime(dt_str, "%Y-%m-%d")
+        # Format like: Tue, Nov 4
+        return dt.strftime("%a %b %d %Y")
+
+    def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
+        """Standardizes the response format for the client."""
+        response = {
+            "success": success,
+            "data": data,
+            "status_code": status_code
+        }
+        if error_message:
+            response['error'] = error_message
+        return response
+
+    def _get_proxy(self):
+        """Fetches the proxy URL from the ProxyManager utility."""
+        try:
+            # Assuming ProxyManager is available and working
+            from .proxy_manager import ProxyManager
+            return ProxyManager().fetch_proxy()
+
+            # Placeholder for the missing import/utility
+            # logger.warning("ProxyManager not imported. Using a dummy proxy string.")
+            # return "http://user:pass@dummy.proxy.com:8080"
+            # END Placeholder
+        except NameError:
+            logger.error("No proxy available: 'ProxyManager' is not defined.")
+            raise Exception("No proxy available: 'ProxyManager' is not defined.")
+
+    def _parse_room_cards_html(self, html_content: str) -> list:
+        """Parses the raw room card HTML content into structured data."""
+        if not self.sb:
+            logger.error("SeleniumBase instance is not initialized for parsing.")
+            return []
+
+        logger.info("Starting HTML content parsing...")
+        structured_data = []
+
+        try:
+            self.sb.set_content(html_content)
+            self.sb.sleep(0.5)
+
+            room_cards = self.sb.find_elements(".room-rate-card-wrapper")
+            logger.info(f"Found {len(room_cards)} room cards for parsing.")
+
+            for card in room_cards:
+                room = {}
+                try:
+                    # 1. Room Type Code
+                    room['room_type_code'] = card.get_attribute("data-room-type-code") or 'N/A'
+                    # 2. Room Title
+                    room['title'] = card.find_element(By.CSS_SELECTOR, ".room-title").text
+                    # 3. Description
+                    room['description'] = card.find_element(By.CSS_SELECTOR, ".truncate-text.room_description").text
+                    # 4. Image URL
+                    try:
+                        room['image_url'] = card.find_element(By.CSS_SELECTOR,".room-card-carousel-wrapper img").get_attribute("src")
+                    except NoSuchElementException:
+                        room['image_url'] = 'No Image Found'
+                        logger.debug(f"No image found for room code: {room['room_type_code']}")
+                    # 5. Rate Type
+                    room['rate_type'] = card.find_element(By.CSS_SELECTOR,".room-rate-content.points-rate span.b-col-7").text
+                    # 6. Rate Value
+                    room['point_value'] = card.find_element(By.CSS_SELECTOR,".room-rate-content.points-rate > span:last-child").text
+
+                    structured_data.append(room)
+                except Exception as e:
+                    logger.warning(f"Failed to parse a room card. Skipping. Error: {e}")
+                    continue
+
+        except Exception as e:
+            logger.error(f"Critical error during HTML parsing setup: {e}")
+            structured_data = []
+
+        self.sb.set_content("")  # Clear temporary content
+        logger.info("HTML parsing complete.")
+        return structured_data
+
+    def _safe_click(self, selector: str, description: str, sleep_time: float = 1.0):
+        """Wrapper for sb.click with robust exception handling for timeouts."""
+        try:
+            self.sb.click(selector)
+            logger.debug(f"Successfully clicked: {description} ({selector})")
+            self.sb.sleep(sleep_time)
+            return True
+        except TimeoutException:
+            logger.error(f"Timeout clicking element: {description} ({selector}). Page state check needed.")
+            return False
+        except Exception as e:
+            logger.error(f"General error clicking element: {description} ({selector}). Error: {e}")
+            return False
+
+    def _safe_type(self, selector: str, text: str, description: str, sleep_time: float = 1.0):
+        """Wrapper for sb.type with robust exception handling for timeouts."""
+        try:
+            self.sb.type(selector, text)
+            logger.debug(f"Successfully typed '{text}' into: {description} ({selector})")
+            self.sb.sleep(sleep_time)
+            return True
+        except TimeoutException:
+            logger.error(f"Timeout typing into element: {description} ({selector}).")
+            return False
+        except Exception as e:
+            logger.error(f"General error typing into element: {description} ({selector}). Error: {e}")
+            return False
+
+    def _navigate_and_search(self):
+        """Handles browser navigation, element interaction, and search execution."""
+
+        # 1. Navigate and setup
+        url = BASE_URL
+        logger.info(f"Navigating to base URL: {url}")
+        try:
+            self.sb.activate_cdp_mode(url)
+            self.sb.sleep(3.5)
+        except WebDriverException as e:
+            logger.critical(f"Failed to navigate or activate CDP mode. Check network/proxy. Error: {e}")
+            return self.build_response(success=False, data=None,status_code= 503, error_message="Navigation failed. Check browser setup or network.")
+
+        # # 2. Handle popups and cookies
+        # self.sb.click_if_visible('button[aria-label="Close"]', timeout=3)
+        # self.sb.click_if_visible("#onetrust-reject-all-handler", timeout=3)
+        # self.sb.sleep(1)
+
+        # 3. Set Location
+        if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"): return False
+        self.sb.sleep(1)
+        if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"): return False
+        self.sb.sleep(3)
+        if not self._safe_click("//*[@role='option']", "Location Suggestion"): return False
+        self.sb.sleep(1)
+
+        # 4. Set Dates and Loyalty (Shadow DOM interaction)
+        logger.info(f"Setting Check-in Date to {self.check_in_date}")
+        if not self._safe_click("//input[@aria-label='date-picker']",'Date Selector'): return False
+        check_in_label = self.windows_format_marriott_date(self.check_in_date)
+        check_out_label = self.windows_format_marriott_date(self.check_out_date)
+        logger.info(f"Converted Date Format {check_in_label} {check_out_label}")
+        date_range_str = f"{check_in_label} - {check_out_label}"
+
+        def go_to_month(self, target_month_year: str):
+            """
+            Continuously clicks the 'next' arrow until the given month (e.g., 'October 2025') appears.
+            """
+            while True:
+                # Collect visible month captions
+                captions = self.sb.find_elements(
+                    "//div[contains(@class, 'DayPicker-Caption')]//div[@data-scroll-date-marker]")
+                months = [c.text.strip() for c in captions if c.text.strip()]
+
+                if target_month_year in months:
+                    break  # Target month visible
+
+                # Try clicking the "Next" button
+                next_buttons = self.find_elements("//*[contains(@class, 'DayPicker-NavButton--next')]")
+                if next_buttons and next_buttons[0].is_displayed():
+                    self.click(next_buttons[0])
+                    time.sleep(random.uniform(1, 2))
+                else:
+                    raise Exception(f"Could not find month {target_month_year}")
+
+        def test_select_dates(self):
+            # Example input values
+            check_in_date = "2025-10-12"
+            check_out_date = "2025-10-25"
+
+            check_in_label = datetime.strptime(check_in_date, "%Y-%m-%d").strftime("%A, %B %-d, %Y")
+            check_out_label = datetime.strptime(check_out_date, "%Y-%m-%d").strftime("%A, %B %-d, %Y")
+
+            checkin_month_year = datetime.strptime(check_in_date, "%Y-%m-%d").strftime("%B %Y")
+            checkout_month_year = datetime.strptime(check_out_date, "%Y-%m-%d").strftime("%B %Y")
+
+            self.log(f"Check-in Month/Year: {checkin_month_year}")
+            self.log(f"Check-out Month/Year: {checkout_month_year}")
+
+            # Navigate to check-in month
+            self.go_to_month(self,checkin_month_year)
+            self.wait_for_element_visible(
+                f"//div[contains(@class, 'DayPicker-Day') and @aria-label='{check_in_label}']", timeout=30)
+            self.click(f"//div[contains(@class, 'DayPicker-Day') and @aria-label='{check_in_label}']")
+            self.human_delay(6, 12)
+
+            # Navigate to check-out month
+            self.go_to_month(checkout_month_year)
+            self.wait_for_element_visible(
+                f"//div[contains(@class, 'DayPicker-Day') and @aria-label='{check_out_label}']", timeout=30)
+            self.click(f"//div[contains(@class, 'DayPicker-Day') and @aria-label='{check_out_label}']")
+            self.human_delay(1.3, 2.6)
+
+            # Click "Done" button
+            self.wait_for_element_visible("//button[@aria-label='Done']", timeout=30)
+            self.click("//button[@aria-label='Done']")
+            self.human_delay(1, 2)
+
+
+
+
+        logger.info(f"Setting Check-out Date to {self.check_out_date}")
+
+        # 5. Select "Use Points" checkbox
+        logger.info("Selecting 'Use Points' checkbox.")
+        if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"): return False
+        self.sb.sleep(1)
+
+        # 6. Click Search
+        logger.info("before clicking to find hotel, generating page cookies")
+        print(self.sb.get_cookies())
+        logger.info("Clicking 'Find Hotels' button...")
+        if not self._safe_click("//button[contains(@class, 'update-search-btn') and contains(text(), 'Find Hotels')]", "Find Hotels Button", sleep_time=6): return False
+
+        # 7. Ensure all rooms are loaded by scrolling
+        logger.info("Scrolling to ensure dynamic content loads...")
+        self.sb.scroll_to_bottom()
+        self.sb.sleep(5)
+        return True
+
+    def _extract_html_and_parse(self):
+        """Extracts the target HTML and calls the parser method."""
+        SCROLL_TARGET_ID = "#room-cards-section-panel"
+        HTML_EXTRACTION_SELECTOR = "#room-cards-section-panel .room-cards"
+        room_cards_html = None
+
+        try:
+            logger.info(f"Attempting to scroll to final target: {SCROLL_TARGET_ID}")
+            # Use slow scroll to ensure the element is loaded/visible
+            self.sb.slow_scroll_to(SCROLL_TARGET_ID)
+            logger.info("Successfully scrolled to the room cards section.")
+            self.sb.sleep(3)
+
+            # Get the HTML content of the target element
+            room_cards_html = self.sb.get_attribute(HTML_EXTRACTION_SELECTOR, "outerHTML")
+            logger.info(f"Successfully retrieved HTML. Length: {len(room_cards_html)} characters.")
+
+            # PARSING STEP
+            if room_cards_html:
+                self.structured_room_data = self._parse_room_cards_html(room_cards_html)
+                logger.info(f"Parsed {len(self.structured_room_data)} structured room entries.")
+
+        except (TimeoutException, NoSuchElementException) as e:
+            logger.error(f"HTML extraction failed. Element '{SCROLL_TARGET_ID}' not found after scroll. Error: {e}")
+            # Do not re-raise, allow flow to continue to return empty data
+
+        except Exception as e:
+            logger.critical(f"Critical error during HTML extraction: {e}")
+            # Do not re-raise, allow flow to continue to return empty data
+
+    def get_search_data(self):
+        """Main method to run the complete scraping process and return client response."""
+
+        final_response = self.build_response(success=False, data=[], status_code=500, error_message="Scraping process did not complete successfully.")
+
+        try:
+            # Initialize SeleniumBase
+            with SB(
+                    uc=True,
+                    test=True,
+                    locale="en",
+                    ad_block=True,
+                    incognito=True,
+                    proxy = self.proxy_url,
+                    agent=self.selected_user_agent,
+                    headless=False,
+            ) as sb:
+                self.sb = sb
+
+                # Navigate and Search
+                if not self._navigate_and_search():
+                    logger.error("Navigation or Search phase failed due to locator timeout.")
+                    final_response = self.build_response(success=False, data=[], status_code=408, error_message="Navigation or Search failed due to locator timeout or missing element.")
+                    return final_response
+
+                # Extract and Parse
+                self._extract_html_and_parse()
+
+                # Final sleep before closing the browser
+                self.sb.sleep(3)
+
+        except Exception as e:
+            # Catches exceptions during SB initialization or in the `with` block
+            logger.critical(f"A fatal error occurred during the scraping process: {e}")
+            final_response = self.build_response(success=False, data=[], status_code=500, error_message=f"A fatal exception occurred: {type(e).__name__}")
+            return final_response
+
+        # Build Final Successful/Unsuccessful Response
+        if self.structured_room_data:
+            logger.info("Data extraction successful. Returning 200.")
+            final_response = self.build_response(success=True, data= self.structured_room_data, status_code=200)
+        else:
+            logger.warning("Scraping completed, but no room data was extracted.")
+            final_response = self.build_response(success=False, data=[], status_code=204, error_message="Search successful, but no room data found for the criteria.")
+
+        return final_response
+
+
+# --- EXECUTION ---
+
+if __name__ == '__main__':
+    scraper = MarriottScraper(
+        check_in_date=DEFAULT_CHECK_IN_DATE,
+        check_out_date=DEFAULT_CHECK_OUT_DATE,
+        location="inn at bellefield hyde park",
+        user_agent_pool=USER_AGENT_POOL
+    )
+
+    data = scraper.get_search_data()
+    print("\n--- FINAL CLIENT RESPONSE ---")
+    print(json.dumps(data, indent=4))

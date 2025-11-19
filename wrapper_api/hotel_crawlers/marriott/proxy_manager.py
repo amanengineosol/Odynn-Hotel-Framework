@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 PROXY_PROVIDER_ENDPOINT=os.getenv('PROXY_PROVIDER_ENDPOINT')
 X_API_TOKEN=os.getenv('X_API_TOKEN')
-PROXY_PROVIDER = ['proxyrack','privateproxy']
+PROXY_PROVIDER = ['smartproxy']
 
 def _build_proxy_url(conn):
     if conn:
@@ -48,7 +48,7 @@ class ProxyManager:
                     data=payload,
                     timeout=10
                 )
-                response.raise_for_status()
+                # response.raise_for_status()
                 data = response.json()
                 conn = data.get('proxy_connection')
                 if not conn:

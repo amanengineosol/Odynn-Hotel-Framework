@@ -33,7 +33,7 @@ def process_live_request(request_data):
         return
     else:
         try:
-            response = fetch_response_func.get_search_data(hotel_id, check_in_date, check_out_date, int(guest_count))
+            response = fetch_response_func.get_search_data
             if response['status_code'] == 200:
                 logger.info(f"Successful got response from crawler: {crawler_name} for request: {request_data.get('request_id')}")
                 response_obj.update({

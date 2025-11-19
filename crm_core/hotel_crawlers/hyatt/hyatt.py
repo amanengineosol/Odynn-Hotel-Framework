@@ -1,10 +1,13 @@
+import asyncio
 import json
 import logging
 import random as rand
-import time
 from datetime import datetime
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from urllib.parse import urlparse, quote
+
+from seleniumbase import SB
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from .proxy_manager import ProxyManager
 from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
 
@@ -20,13 +23,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def human_delay(a, b):
-    time.sleep(rand.uniform(a, b))
+async def human_delay(a, b):
+    await asyncio.sleep(rand.uniform(a, b))
+
 
 class ExtractHyatt:
 
     def __init__(self):
         self._proxy_fetcher = ProxyManager()
+        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
+        self._headers = headers
 
     def build_response(self, success: bool, data: any, status_code: int):
         return {
@@ -35,30 +41,13 @@ class ExtractHyatt:
             "status_code": status_code
         }
 
-    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
+    async def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
         logger.info("Getting proxy IP for current session")
         _proxy_url = self._proxy_fetcher.fetch_proxy()
         if not _proxy_url:
             message = "Proxy url not retrieved from the server"
             return self.build_response(success=False, data=message, status_code=101)
 
-        parsed = urlparse(_proxy_url)
-        if parsed.username and parsed.password:
-            proxy = {
-                "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
-                "username": parsed.username,
-                "password": parsed.password,
-            }
-
-        logger.info("Proxy url dict created for request")
-        logger.info("Setting up crawler to extract data")
-
-        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        # while browser_family != "chromium":
-        #     browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        _headers = headers
-
-        # Validate inputs
         check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
         check_out = datetime.strptime(check_out_date, "%Y-%m-%d")
         length_of_stay = (check_out - check_in).days
@@ -74,218 +63,153 @@ class ExtractHyatt:
         encoded_hotel_name = quote(hotel_name, safe="")
 
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    headless=True,
-                    proxy=proxy,
-                    args=[
-                        '--no-first-run',
-                        '--no-default-browser-check',
-                        '--disable-blink-features=AutomationControlled',
-                        '--disable-http2',
-                        '--disable-web-security',
-                        '--disable-3d-apis',
-                        '--disable-webrtc-encryption',
-                        '--disable-features=WebRtcHideLocalIpsWithMdns',
-                        '--disable-features=VizDisplayCompositor',
-                        '--disable-dev-shm-usage',
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-background-timer-throttling',
-                        '--disable-backgrounding-occluded-windows',
-                        '--disable-renderer-backgrounding'
+            with SB(
+                uc=True,
+                undetectable=True,
+                test=True,
 
-                    ],
-                )
-                try:
-                    logger.info("Sending Home page request....")
-                    extra_headers = {
-                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
-                    }
+                # locale / privacy
+                locale="en",
+                do_not_track=True,
+                # incognito=True,
 
-                    logger.info(f"Selected UA: {_headers['user-agent']}")
+                # proxy
+                proxy=_proxy_url,
+                proxy_bypass_list="*",
 
-                    context = browser.new_context(
-                        user_agent=_headers["user-agent"],
-                        locale="en-US",
-                        extra_http_headers=extra_headers,
-                    )
+                # fingerprint / stealth
+                agent=self._headers['user-agent'],
+                ad_block=True,
+                disable_csp=True,
 
-                    page = context.new_page()
-                    page.set_default_timeout(100000)
+                # # browser stability
+                # no_sandbox=True,
+                # disable_gpu=True,
+                # disable_web_security=True,
 
-                    for attempt in range(1, max_retries + 1):
-                        try:
-                            page.goto("https://www.hyatt.com/", wait_until="load", timeout=120000)
-                            human_delay(6, 12)
+                # extra chrome args
+                chromium_arg=[
+                    "--disable-infobars",
+                    "--no_sandbox",
+                    "--disable_gpu",
+                    "--disable_web_security"
+                ],
 
-                            page.locator('input[data-id="location"]').wait_for(timeout=120000)
-                            page.get_by_role("button", name="Find Hotels")
+                # timing
+                timeout_multiplier=2.0,
+                slow=False,
+                # verify_delay=0.5,
 
-                            logger.info("Home page request completed successfully.....")
+                headless=True,
+            ) as sb:
+                self.
+                sb.set_window_size(1280 + rand.randint(-100, 100),
+                                   720 + rand.randint(-50, 50))
+                sb.sleep(0.2)
+                logger.info("Browser launched successfully.")
 
-                            # ---- Mouse movement ----
-                            logger.info("Sleeping for few seconds for mouse movement.....")
-                            human_delay(2, 5)
-                            page.mouse.move(rand.randint(0, 2), rand.randint(3, 8))
-                            page.mouse.down()
-                            page.mouse.move(0, rand.randint(100, 120))
-                            page.mouse.move(rand.randint(100, 120), rand.randint(100, 120))
-                            page.mouse.move(rand.randint(100, 120), 0)
-                            page.mouse.move(0, 0)
-                            page.mouse.up()
+                # -------------------------------------------------------
+                # Step 1: Go to homepage
+                # -------------------------------------------------------
+                for attempt in range(1, max_retries + 1):
+                    # 1. Navigate and setup
+                    url = "https://www.hyatt.com/loyalty/en-US"
+                    logger.info(f"Navigating to base URL: {url}")
+                    try:
+                        self.sb.activate_cdp_mode(url)
+                        self.sb.sleep(3.5)
+                    except WebDriverException as e:
+                        logger.critical(f"Failed to navigate or activate CDP mode. Check network/proxy. Error: {e}")
+                        return self.build_response(success=False, data=None, status_code=503,
+                                                   error_message="Navigation failed. Check browser setup or network.")
 
-                            page.keyboard.press("PageDown")
-                            human_delay(1, 3)
-                            page.keyboard.press("PageUp")
-                            human_delay(2, 4)
+                    # 2. Handle popups and cookies
+                    self.sb.click_if_visible('button[aria-label="Close"]', timeout=3)
+                    self.sb.click_if_visible("#onetrust-reject-all-handler", timeout=3)
+                    self.sb.sleep(1)
 
-                            logger.info("Mouse movement completed.....")
-                            break
+                    # 3. Set Location
+                    if not self._safe_click('input[id="search-term"]', "Search Term Input"): return False
+                    self.sb.sleep(1)
+                    if not self._safe_type('input[id="search-term"]', self.location, "Location Text"): return False
+                    self.sb.sleep(3)
+                    if not self._safe_click('li[data-js="suggestion"]', "Location Suggestion"): return False
+                    self.sb.sleep(1)
 
-                        except PlaywrightTimeoutError as pwex:
-                            logger.warning(f"Attempt {attempt} failed: {pwex}")
-                            if attempt < max_retries:
-                                time.sleep(2)
-                            else:
-                                return self.build_response(success=False, data={"details": f"Failed after retries: {pwex}"}, status_code=103)
+                    # 4. Set Dates and Loyalty (Shadow DOM interaction)
+                    logger.info(f"Setting Check-in Date to {self.check_in_date}")
+                    try:
+                        self.sb.execute_script(f"""
+                                    document.querySelector("#qb-form-container > div > form > div.quickbook-form_datePicker__gU5Ll > be-datepicker")
+                                        .shadowRoot.querySelector("#checkin-date").value = '{self.check_in_date}'
+                                """)
+                        self.sb.sleep(1)
+                    except Exception as e:
+                        logger.error(f"Failed to set check-in date via JS (Shadow DOM). Error: {e}")
+                        return False
 
-                    # ---- Room rates API calls ----
-                    context.add_cookies([{"name": "rate_filter", "value": "woh", "domain": "hyatt.com", "path": "/"}])
-                    cookies = context.cookies()
-                    cookie_header = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+                    logger.info(f"Setting Check-out Date to {self.check_out_date}")
+                    try:
+                        self.sb.execute_script(f"""
+                                    document.querySelector("#qb-form-container > div > form > div.quickbook-form_datePicker__gU5Ll > be-datepicker")
+                                        .shadowRoot.querySelector("#checkout-date").value = '{self.check_out_date}'
+                                """)
+                        self.sb.sleep(3)
+                    except Exception as e:
+                        logger.error(f"Failed to set check-out date via JS (Shadow DOM). Error: {e}")
+                        return False
 
-                    api_url = (
-                        f"https://www.hyatt.com/shop/service/rooms/roomrates/{hotel_id}"
-                        f"?spiritCode={hotel_id}&rooms=1&adults={guest_count}"
-                        f"&location={encoded_hotel_name}"
-                        f"&checkinDate={check_in_date}&checkoutDate={check_out_date}"
-                        f"&kids=0&rate=Standard&suiteUpgrade=true"
-                    )
+                    # 5. Select "Use Points" checkbox
+                    logger.info("Selecting 'Use Points' checkbox.")
+                    try:
+                        self.sb.execute_script("""
+                                    const checkbox = document.querySelector('be-checkbox[name="use-points"]');
+                                    if (checkbox) {
+                                        checkbox.checked = true;
+                                        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                """)
+                        self.sb.sleep(1)
+                    except Exception as e:
+                        logger.warning(f"Failed to check 'Use Points' via JS. Proceeding anyway. Error: {e}")
 
-                    ref_url = f"https://www.hyatt.com/shop/rooms/{hotel_id}?location={encoded_hotel_name}&checkinDate={check_in_date}&checkoutDate={check_out_date}&rooms=1&adults={guest_count}&kids=0&rate=Standard&rateFilter=woh"
+                    # 6. Click Search
+                    logger.info("before clicking to find hotel, generating page cookies")
+                    # print(self.sb.get_cookies())
+                    logger.info("Clicking 'Find Hotels' button...")
+                    if not self._safe_click("button.be-button-shop", "Find Hotels Button", sleep_time=6): return False
 
-                    api_headers = {
-                        'host': 'www.hyatt.com',
-                        'sec-ch-ua-platform': _headers["sec-ch-ua-platform"],
-                        'user-agent': _headers["user-agent"],
-                        'sec-ch-ua': _headers["sec-ch-ua"],
-                        'sec-ch-ua-mobile': _headers["sec-ch-ua-mobile"],
-                        'accept': '*/*',
-                        'sec-fetch-site': 'same-origin',
-                        'sec-fetch-mode': 'cors',
-                        'sec-fetch-dest': 'empty',
-                        'referer': ref_url,
-                        'accept-encoding': 'gzip, deflate, br, zstd',
-                        'priority': 'u=1, i',
-                        # 'accept-language': 'en-US,en;q=0.9'
-                        'cookie': cookie_header
-                    }
+                    # 7. Ensure all rooms are loaded by scrolling
+                    logger.info("Scrolling to ensure dynamic content loads...")
+                    self.sb.scroll_to_bottom()
+                    self.sb.sleep(5)
 
-                    logger.info(f"Navigating to roomrate API with reference, headers:: {api_url} :: {ref_url} :: {api_headers}")
-
-                    response = page.request.get(url=api_url, headers=api_headers)
-
-                    logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
-                    logger.info(f"Final Page Content Data: {response.text()[:200]}")
-
-                    decodedResponse = response.text()
-                    if decodedResponse == "":
-                    # if decodedResponse == "" and response.status == 200:
-                        logger.info(f"Navigating to roomrate API Again with reference, headers:: {api_url} :: {ref_url} :: {api_headers}")
-
-                        response = page.request.get(url=api_url, headers=api_headers)
-
-                        logger.info(f"Final Page Content content-type Headers: {response.headers.get('content-type')}")
-                        logger.info(f"Final Page Content Data: {response.text()[:200]}")
-                        decodedResponse = response.text()
-                        if decodedResponse == "" and response.status == 200:
-                            status = 429
-                            message = {
-                                "details": f"Blank page occurred {status}"
-                            }
-                            return self.build_response(success=False, data=message, status_code=status)
-                        elif decodedResponse == "":
-                            message = {
-                                "details": f"Blank page occurred {response.status}"
-                            }
-                            return self.build_response(success=False, data=message, status_code=response.status)
-
-
-
-
-                    if '"invalidSpiritCode"' in decodedResponse:
-                        logging.error("Property Code is invalid.")
-                        message = {
-                            "details": "Property Code is invalid."
-                        }
-                        return self.build_response(success=True, data=message, status_code=response.status)
-
-                    data_json = None
-                    if response.status == 200 and decodedResponse:
-                        try:
-                            data_json = json.loads(decodedResponse)
-                        except Exception as e:
-                            message = {
-                                "details": f"Response Json not available {e}"
-                            }
-                            return self.build_response(success=False, data=message, status_code=response.status)
-
-                    if response.status == 200 and data_json and "roomRates" in decodedResponse and "lowestAvgPointValue" in decodedResponse:
-                        logger.info(f"Response fetched successfully from Roomrate API")
-                        return self.build_response(success=True, data=data_json, status_code=response.status)
-                    elif response.status == 200 and data_json and "roomRates" in decodedResponse and "lowestAvgPointValue" not in decodedResponse:
-                        logger.error(f"Hotel is not available at selected date.")
-                        message = {
-                            "details": "Hotel is not available at selected date."
-                        }
-                        return self.build_response(success=True, data=message, status_code=response.status)
-                    else:
-                        logger.error(f"Roomrate API failed with status {response.status}")
-                        message = {
-                            "details": f"Unknown Error{response.text()} with status: {response.status}"
-                        }
-                        if response.status == 522:
-                            message = {
-                                "details": f"Hyatt connection Error {response.text()}with status: {response.status}"
-                            }
-
-
-
-                        return self.build_response(success=False, data=message, status_code=response.status)
-
-                except Exception as ex:
-                    logger.exception(f"Exception occurred during scraping: {ex}")
-                    message = {
-                        "details": f"Exception occurred during scraping: {ex}"
-                    }
-                    return self.build_response(success=False, data=message, status_code=103)
-
-                finally:
-                    logger.info("Closing browser...")
-                    browser.close()
         except Exception as ex:
             logger.exception(f"Critical Error: {ex}")
-            message = {
-                "details": f"Critical Error: {ex}"
-            }
-            return self.build_response(success=False, data=message, status_code=100)
+            message = {"details": f"Critical Error: {ex}"}
+            return self.build_response(False, message, 100)
+
+        finally:
+            try:
+                await browser.stop()
+                logger.info("Browser stopped successfully.")
+            except Exception:
+                logger.warning("Browser already stopped or failed to close cleanly.")
 
 
 # ---------------- Runner ----------------
 if __name__ == "__main__":
-    crawl = ExtractHyatt()
-    data = crawl.get_search_data(
-        hotel_id="yulzm-Hyatt Place Montreal - Downtown",
-        check_in_date="2026-01-28",
-        check_out_date="2026-01-29",
-        guest_count=1,
-        # hotel_id="m0207-Kinsterna Hotel",
-        # check_in_date="2025-12-21",
-        # check_out_date="2025-12-23",
-        # guest_count=1,
-    )
-    if data:
-        print("API data fetched successfully")
-    else:
-        print("API data could not be fetched with current cookies")
+    async def main():
+        crawl = ExtractHyatt()
+        data = await crawl.get_search_data(
+            hotel_id="yulzm-Hyatt Place Montreal - Downtown",
+            check_in_date="2025-11-28",
+            check_out_date="2025-11-29",
+            guest_count=1,
+        )
+        if data:
+            print("API data fetched successfully", data)
+        else:
+            print("API data could not be fetched")
+
+    asyncio.run(main())

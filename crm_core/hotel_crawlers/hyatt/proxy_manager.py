@@ -9,11 +9,14 @@ from dotenv import load_dotenv
 load_dotenv()
 PROXY_PROVIDER_ENDPOINT=os.getenv('PROXY_PROVIDER_ENDPOINT')
 X_API_TOKEN=os.getenv('X_API_TOKEN')
-PROXY_PROVIDER = ['proxyrack','privateproxy', 'smartproxy']
+PROXY_PROVIDER = ['smartproxy']
 
 def _build_proxy_url(conn):
     if conn:
-        return f"http://{conn.get('user')}:{conn.get('password')}@{conn.get('host')}:{conn.get('port')}"
+        ####  This is for selenium base
+        return f"{conn.get('user')}:{conn.get('password')}@{conn.get('host')}:{conn.get('port')}"
+        ####  For Others
+        # return f"http://{conn.get('user')}:{conn.get('password')}@{conn.get('host')}:{conn.get('port')}"
     raise("Proxy not generated. Please check your proxy provider and try again.")
 
 
@@ -42,12 +45,14 @@ class ProxyManager:
                     "provider": self.proxy_provider,
                     "region_code": region_code
                 })
+                print(payload)
                 response = requests.post(
                     self.proxy_endpoint,
                     headers=headers,
                     data=payload,
                     timeout=10
                 )
+                print('@@@@@@@@@@')
                 response.raise_for_status()
                 data = response.json()
                 conn = data.get('proxy_connection')

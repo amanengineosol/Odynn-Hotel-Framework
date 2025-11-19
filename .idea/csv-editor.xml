@@ -10,6 +10,20 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\wrapper_api\hotels_marriott_mappings.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\wrapper_api\marriott_hotel_requests.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
