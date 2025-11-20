@@ -1,8 +1,0 @@
-2025-10-08 14:58:44,087 - INFO - Getting proxy IP for current session
-2025-10-08 14:58:45,628 - INFO - Proxy url dict created
-2025-10-08 14:58:45,630 - ERROR - Critical Error: Chrome.__init__() got an unexpected keyword argument 'headless'
-Traceback (most recent call last):
-  File "C:\Users\amod.mishra_engineos\Odynn-Hotel-Framework\crm_core\hotel_crawlers\hyatt\hypydoll.py", line 76, in _async_get_search_data
-    async with Chrome(headless=False, proxy=proxy) as browser:
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: Chrome.__init__() got an unexpected keyword argument 'headless'
