@@ -8,6 +8,31 @@ from seleniumbase import SB
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 
+# from mycdp.network import PrivateNetworkRequestPolicy
+#
+# # Gracefully handle new Chrome value
+# try:
+#     PrivateNetworkRequestPolicy("PermissionBlock")
+# except ValueError:
+#     PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
+#
+# import mycdp.util
+#
+# _event_parsers = mycdp.util._event_parsers
+#
+# def patched_parse_event(data):
+#     method = data.get("method")
+#     params = data.get("params", {})
+#     parser = _event_parsers.get(method)
+#
+#     if parser is None:
+#         # ignore unknown CDP events
+#         return None
+#
+#     return parser.from_json(params)
+#
+# mycdp.util.parse_json_event = patched_parse_event
+
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('HyattScraper')
@@ -28,7 +53,21 @@ if not logger.handlers:
 # --- CONFIGURATION (Global Constants) ---
 
 USER_AGENT_POOL = [
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
 ]
 # USER_AGENT_POOL = [
 #     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
@@ -60,7 +99,7 @@ class HyattScraper:
         self.structured_room_data = []
         self.sb = None
         logger.debug(f"Using User-Agent: {self.selected_user_agent}")
-        logger.debug(f"Using Proxy: {self.proxy_url}")
+        # logger.debug(f"Using Proxy: {self.proxy_url}")
 
     def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
         """Standardizes the response format for the client."""
@@ -147,19 +186,73 @@ class HyattScraper:
             logger.error(f"General error clicking element: {description} ({selector}). Error: {e}")
             return False
 
-    def _safe_type(self, selector: str, text: str, description: str, sleep_time: float = 1.0):
-        """Wrapper for sb.type with robust exception handling for timeouts."""
+    def _safe_type(self, selector: str, text: str, description: str,
+                   min_delay: float = 0.04, max_delay: float = 0.15,
+                   hesitation_chance: float = 0.07):
+
+        """
+        Types text into an input field using real human-like keystrokes.
+        Works correctly with SeleniumBase + UC.
+        """
+
         try:
-            self.sb.type(selector, text)
+            # Focus the element first (important!)
+            self.sb.click(selector)
+
+            # Clear old input safely
+            self.sb.clear(selector)
+
+            for char in text:
+                # send_keys works perfectly for single characters
+                self.sb.send_keys(selector, char)
+
+                # random typing delay
+                delay = random.uniform(min_delay, max_delay)
+                time.sleep(delay)
+
+                # occasional longer hesitation (human behavior)
+                if random.random() < hesitation_chance:
+                    time.sleep(random.uniform(0.3, 0.9))
+
             logger.debug(f"Successfully typed '{text}' into: {description} ({selector})")
-            self.sb.sleep(sleep_time)
             return True
+
         except TimeoutException:
-            logger.error(f"Timeout typing into element: {description} ({selector}).")
+            logger.error(f"Timeout typing into: {description} ({selector})")
             return False
+
         except Exception as e:
-            logger.error(f"General error typing into element: {description} ({selector}). Error: {e}")
+            logger.error(f"Typing error on {description} ({selector}). Error: {e}")
             return False
+
+    # def _safe_type(self, selector: str, text: str, description: str, sleep_time: float = 1.0):
+    #     """Wrapper for sb.type with robust exception handling for timeouts."""
+    #     try:
+    #         self.sb.type(selector, text)
+    #         logger.debug(f"Successfully typed '{text}' into: {description} ({selector})")
+    #         self.sb.sleep(sleep_time)
+    #         return True
+    #     except TimeoutException:
+    #         logger.error(f"Timeout typing into element: {description} ({selector}).")
+    #         return False
+    #     except Exception as e:
+    #         logger.error(f"General error typing into element: {description} ({selector}). Error: {e}")
+    #         return False
+
+    def test_dump_curl(self):
+        self.sb.enable_network_logging()
+
+        self.sb.open(BASE_URL)
+
+        # Access network logs
+        for request in self.sb.driver.requests:
+            if request.response:
+                try:
+                    curl_cmd = request.curl_command
+                    print("\n===== cURL REQUEST =====")
+                    print(curl_cmd)
+                except Exception:
+                    pass
 
     def _navigate_and_search(self):
         """Handles browser navigation, element interaction, and search execution."""
@@ -169,13 +262,30 @@ class HyattScraper:
         logger.info(f"Navigating to base URL: {url}")
         try:
             self.sb.activate_cdp_mode(url)
+            logs = self.sb.get_cdp_logs()
+            logger.info(f"Logs: {logs}")
+            with open ("/tmp/log.log",'w') as f:
+                f.write(logs)
+            # self.test_dump_curl()
+            # if request.response:
+            #     try:
+            #         curl_cmd = request.curl_command
+            #         print("\n===== cURL REQUEST =====")
+            #         print(curl_cmd)
+            #     except Exception:
+            #         pass
             self.sb.sleep(3.5)
         except WebDriverException as e:
             logger.critical(f"Failed to navigate or activate CDP mode. Check network/proxy. Error: {e}")
             return self.build_response(success=False, data=None,status_code= 503, error_message="Navigation failed. Check browser setup or network.")
 
         # 2. Handle popups and cookies
-        self.sb.save_screenshot("initial_page_load.png")
+        # self.sb.save_screenshot("initial_page_load.png")
+        self.sb.save_screenshot("hyatt_home_page.png")
+
+        html = self.sb.get_page_source()
+        with open("hyatt_home_page.html", "w", encoding="utf-8") as f:
+            f.write(html)
         self.sb.click_if_visible('button[aria-label="Close"]', timeout=3)
         self.sb.click_if_visible("#onetrust-reject-all-handler", timeout=3)
         self.sb.sleep(1)
@@ -281,15 +391,63 @@ class HyattScraper:
         try:
             # Initialize SeleniumBase
             with SB(
-                    uc=True,
-                    test=True,
-                    locale="en",
-                    ad_block=True,
-                    incognito=True,
-                    proxy = self.proxy_url,
-                    agent=self.selected_user_agent,
-                    headless=True,
+                uc=True,
+                undetectable=True,
+                test=True,
+
+                # locale / privacy
+                locale="en",
+                do_not_track=True,
+                incognito=True,
+
+                # proxy
+                # proxy=self.proxy_url,
+                # proxy_bypass_list="*",
+
+                # fingerprint / stealth
+                agent=self.selected_user_agent,
+                ad_block=True,
+                disable_csp=True,
+
+                # # browser stability
+                # no_sandbox=True,
+                # disable_gpu=True,
+                # disable_web_security=True,
+
+                # extra chrome args
+                chromium_arg=[
+                    "--headless=new",
+                    "--disable-infobars",
+                    "--no_sandbox",
+                    "--disable_gpu",
+                    # "--disable_web_security",
+                    "--disable-features=IsolateOrigins,site-per-process",
+                    "--disable-dev-shm-usage",
+                    "--disable-blink-features=AutomationControlled",
+                    # "--window-size=1280,800",
+                ],
+
+                # chromium_arg=[
+                #     # "--headless=new"    ### make uncomment for docker
+                #     "--disable-infobars",
+                #     "--no_sandbox",
+                #     "--disable_gpu",
+                #     "--disable-dev-shm-usage",
+                #     "--window-size=1280,800",
+                #     "--start-maximized"
+                # ],
+
+                # timing
+                timeout_multiplier=2.0,
+                slow=False,
+                # verify_delay=0.5,
+
+                headless=True,
             ) as sb:
+
+                sb.set_window_size(1280 + random.randint(-100, 100),
+                                   720 + random.randint(-50, 50))
+                sb.sleep(0.2)
                 self.sb = sb
 
                 # Navigate and Search
@@ -327,7 +485,7 @@ class HyattScraper:
 if __name__ == '__main__':
     scraper = HyattScraper()
 
-    data = scraper.get_search_data(hotel_id="ancza-Hyatt Place Edmonton-West", check_in_date="2025-11-12", check_out_date="2025-11-14")
+    data = scraper.get_search_data(hotel_id="ancza-Hyatt Place Edmonton-West", check_in_date="2026-02-14", check_out_date="2026-02-15")
     print("\n--- FINAL CLIENT RESPONSE ---")
     print(json.dumps(data, indent=4))
     

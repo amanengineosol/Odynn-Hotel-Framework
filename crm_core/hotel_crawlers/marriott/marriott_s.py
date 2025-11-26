@@ -1,323 +1,558 @@
+import random
 import json
-import logging
-import random as rand
 import time
+import logging
 from datetime import datetime
-from playwright.sync_api import sync_playwright , TimeoutError as PlaywrightTimeoutError
-from urllib.parse import urlparse, quote
-from .proxy_manager import ProxyManager
-from .random_user_agent import get_random_sec_ch_headers, USER_AGENT
-import requests
+from seleniumbase import SB
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from mycdp.network import PrivateNetworkRequestPolicy
 
-# ---------------- Log configuration ----------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("marriott.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+# Gracefully handle new Chrome value
+try:
+    PrivateNetworkRequestPolicy("PermissionBlock")
+except ValueError:
+    PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
 
+import mycdp.util
 
-def human_delay(a, b):
-    time.sleep(rand.uniform(a, b))
+_event_parsers = mycdp.util._event_parsers
 
+def patched_parse_event(data):
+    method = data.get("method")
+    params = data.get("params", {})
+    parser = _event_parsers.get(method)
+
+    if parser is None:
+        # ignore unknown CDP events
+        return None
+
+    return parser.from_json(params)
+
+mycdp.util.parse_json_event = patched_parse_event
+
+# --- SETUP LOGGING ---
+# Configure the logger for the module
+logger = logging.getLogger('MarriottScraper')
+logger.setLevel(logging.DEBUG)
+logger.propagate = False
+
+# Create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+
+# Create formatter and add it to the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+
+# Add the handler to the logger
+if not logger.handlers:
+    logger.addHandler(ch)
+
+# --- CONFIGURATION (Global Constants) ---
+
+USER_AGENT_POOL = [
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
+    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
+    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+]
+BASE_URL = "https://www.marriott.com/default.mi"
 
 class ExtractMarriott:
-    def __init__(self):
-        self._proxy_fetcher = ProxyManager()
+    """
+    Encapsulates all logic for scraping Hyatt room card data using SeleniumBase,
+    with robust logging and exception handling.
+    """
 
-    def build_response(self, success: bool, data: any, status_code: int):
-        return {
+    def __init__(self):
+        # Configuration
+        self.check_in_date = None
+        self.check_out_date = None
+        self.location = None
+        self.user_agent_pool = USER_AGENT_POOL
+        self.selected_user_agent = random.choice(self.user_agent_pool)
+        self.proxy_url = self._get_proxy()
+
+        # State
+        self.structured_room_data = []
+        self.sb = None
+        logger.info(f"Using User-Agent: {self.selected_user_agent}")
+        # logger.info(f"Using Proxy: {self.proxy_url}")
+
+    def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
+        """Standardizes the response format for the client."""
+        response = {
             "success": success,
             "data": data,
             "status_code": status_code
         }
+        if error_message:
+            response['error'] = error_message
+        return response
 
-    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count, max_retries=3):
-        logger.info("Getting proxy IP for current session")
-        _proxy_url = self._proxy_fetcher.fetch_proxy()
-        if not _proxy_url:
-            message = "Proxy url not retrieved from the server"
-            return self.build_response(success=False, data=message, status_code=101)
+    def _get_proxy(self):
+        """Fetches the proxy URL from the ProxyManager utility."""
+        try:
+            # Assuming ProxyManager is available and working
+            from .proxy_manager import ProxyManager
+            return ProxyManager().fetch_proxy()
 
-        parsed = urlparse(_proxy_url)
-        if parsed.username and parsed.password:
-            proxy = {
-                "server": f"{parsed.scheme}://{parsed.hostname}:{parsed.port}",
-                "username": parsed.username,
-                "password": parsed.password,
-            }
+        except NameError:
+            logger.error("No proxy available: 'ProxyManager' is not defined.")
+            raise Exception("No proxy available: 'ProxyManager' is not defined.")
 
-        logger.info("Proxy url dict created for request")
-        logger.info("Setting up crawler to extract data")
 
-        proxies = {
-            'http': _proxy_url,
-            'https': _proxy_url
-        }
-        logger.info("Proxy url dict created for request")
+    def _parse_room_cards_html(self, html_content: str) -> list:
+        """Parse Marriott room cards from provided HTML."""
+        if not self.sb:
+            logger.error("SeleniumBase instance missing")
+            return []
 
-        # ---------- Session Setup ----------
-        session = requests.Session()
-        session.proxies.update(proxies)
+        logger.info("Parsing room HTML content...")
+        rooms = []
 
-        browser_family, headers = get_random_sec_ch_headers(USER_AGENT)
-        _headers = headers
+        try:
+            self.sb.set_content(html_content)
+            self.sb.sleep(0.9)
 
-        # Validate inputs
-        check_in = datetime.strptime(check_in_date, "%Y-%m-%d")
-        check_out = datetime.strptime(check_out_date, "%Y-%m-%d")
-        length_of_stay = (check_out - check_in).days
-        if not hotel_id or length_of_stay <= 0 or guest_count <= 0:
-            raise ValueError("hotel_id/no_of_stays/guest must have valid values.")
+            # SELECT ALL ROOM CARDS
+            room_cards = self.sb.find_elements("div[data-testid='RateCardV2']")
+            logger.info(f"Found {len(room_cards)} room cards.")
 
+            for card in room_cards:
+                try:
+                    logger.info(f"Parsing card '{card.text}'...")
+                    room = {}
+
+                    # Room Name
+                    room["title"] = card.find_element(
+                        By.CSS_SELECTOR, ".room-name"
+                    ).text.strip()
+
+                    # Room Details Link -> extract roomPoolCode
+                    try:
+                        details_link = card.find_element(
+                            By.CSS_SELECTOR, ".room-desc a.room-detail-link"
+                        ).get_attribute("href")
+                        room_code = details_link.split("roomPoolCode=")[1].split("&")[0]
+                        room["room_type_code"] = room_code
+                    except Exception:
+                        room["room_type_code"] = "N/A"
+
+                    # Description (Marriott rarely shows description, may be blank)
+                    try:
+                        desc_el = card.find_element(
+                            By.CSS_SELECTOR, ".rate-description"
+                        )
+                        room["description"] = desc_el.text.strip()
+                    except:
+                        room["description"] = "No description"
+
+                    # Primary image
+                    try:
+                        img = card.find_element(
+                            By.CSS_SELECTOR, ".image-container picture img"
+                        ).get_attribute("src")
+                        room["image_url"] = img
+                    except:
+                        room["image_url"] = "No Image Found"
+
+                    # Points rate
+                    try:
+                        points = card.find_element(
+                            By.CSS_SELECTOR, ".rate-details .points span"
+                        ).text.strip()
+                    except:
+                        points = "N/A"
+
+                    room["point_value"] = points
+
+                    rooms.append(room)
+
+                except Exception as e:
+                    logger.warning(f"Failed to parse room card: {e}")
+                    continue
+
+        except Exception as e:
+            logger.error(f"Parsing failed: {e}")
+
+        self.sb.set_content("")
+        return rooms
+
+    def _safe_click(self, selector: str, description: str, sleep_time: float = 1.0):
+        """Wrapper for sb.click with robust exception handling for timeouts."""
+        try:
+            self.sb.click(selector)
+            logger.info(f"Successfully clicked: {description} ({selector})")
+            self.sb.sleep(sleep_time)
+            return True
+        except TimeoutException:
+            logger.error(f"Timeout clicking element: {description} ({selector}). Page state check needed.")
+            return False
+        except Exception as e:
+            logger.error(f"General error clicking element: {description} ({selector}). Error: {e}")
+            return False
+
+    def _safe_type(self, selector: str, text: str, description: str,
+                   min_delay: float = 0.01, max_delay: float = 0.3,
+                   hesitation_chance: float = 0.04):
+
+        """
+        Types text into an input field using real human-like keystrokes.
+        Works correctly with SeleniumBase + UC.
+        """
+
+        try:
+            # Focus the element first (important!)
+            self.sb.click(selector)
+
+            # Clear old input safely
+            self.sb.clear(selector)
+
+            for char in text:
+                # send_keys works perfectly for single characters
+                self.sb.send_keys(selector, char)
+
+                # random typing delay
+                delay = random.uniform(min_delay, max_delay)
+                time.sleep(delay)
+
+                # occasional longer hesitation (human behavior)
+                if random.random() < hesitation_chance:
+                    time.sleep(random.uniform(0.1, 0.4))
+
+            logger.info(f"Successfully typed '{text}' into: {description} ({selector})")
+            return True
+
+        except TimeoutException:
+            logger.error(f"Timeout typing into: {description} ({selector})")
+            return False
+
+        except Exception as e:
+            logger.error(f"Typing error on {description} ({selector}). Error: {e}")
+            return False
+
+
+    def _navigate_and_search(self):
+        """Handles browser navigation, element interaction, and search execution."""
+
+        # 1. Navigate and setup
+        url = BASE_URL
+        logger.info(f"Navigating to base URL: {url}")
+        try:
+            self.sb.open(url)
+            self.sb.sleep(3.5)
+        except WebDriverException as e:
+            logger.critical(f"Failed to navigate or activate CDP mode. Error: {e}")
+            return False
+
+        # self.sb.focus("body")
+
+        # 2. Set Location
+        if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
+            return False
+        self.sb.sleep(1)
+
+        if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"):
+            return False
+
+        self.sb.sleep(3)
+        self.sb.wait_for_element_visible('[role="option"]', timeout=10)
+        self.sb.click('[role="option"]')
+        logger.info("Successfully clicked suggestion")
+        self.sb.sleep(1)
+
+        # ---- OPEN CALENDAR ----
+        logger.info("Opening calendar...")
+
+        self.sb.click("//body")
+        self.sb.sleep(0.3)
+
+        date_input = self.sb.find_element("//input[@aria-label='date-picker']")
+        date_input.click()
+        logger.info("Successfully open calendar")
+        self.sb.sleep(0.5)
+
+        def go_to_month(target_month_year: str):
+            """
+            Navigates the calendar forward until the target month/year is visible.
+            The target_month_year should be in the format 'month year' (e.g., 'january 2026').
+            """
+            target = target_month_year.strip().lower()
+            logger.info(f"Go to month: {target_month_year}")
+
+            # Limit search to prevent infinite loop
+            for _ in range(18):
+                caps = self.sb.find_elements("//div[@class='DayPicker-Caption']/div")
+                caps = [c for c in caps if c.text.strip()]
+
+                if not caps:
+                    self.sb.sleep(0.3)
+                    continue
+
+                visible = [c.text.strip().lower() for c in caps]
+                first = visible[0]
+
+                logger.info(f"Visible month caption: {visible}")
+
+                # 2. Check if the target month is the first visible month
+                if first == target:
+                    logger.info(f"First visible month matched target: {first}")
+                    # Wait for the day grid to be fully rendered
+                    self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
+                    return
+
+                # 3. Click the next button and wait for the render
+                next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
+                next_button.click()
+
+                self.sb.sleep(0.3)
+                self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
+                self.sb.sleep(0.3)
+
+            raise Exception(f"Could not reach month: {target_month_year}")
+
+
+        def select_check_in_check_out(check_in_date_label: str, check_out_date_label: str, check_in_month_year,
+            check_out_month_year):
+
+            target_month_year = check_in_month_year
+
+            # --- STEP 1: Navigate to the correct month ---
+            go_to_month(target_month_year)
+            self.sb.sleep(9)
+
+            # html = self.sb.get_page_source()
+            # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
+            #     f.write(html)
+
+            # --- STEP 2: Select Dates via JavaScript ---
+            logger.info(f"Selecting dates: {check_in_date_label} to {check_out_date_label}")
+
+            # --- STEP 2: Select Dates using direct Selenium Click ---
+            CHECK_IN_XPATH = f'//div[@aria-label="{check_in_date_label}"]'
+            CHECK_OUT_XPATH = f'//div[@aria-label="{check_out_date_label}"]'
+
+            try:
+                check_in_element = self.sb.find_element(CHECK_IN_XPATH)
+                self.sb.sleep(0.5)
+                check_in_element.click()
+                logger.info(f"Clicked Check-in date: {check_in_date_label}")
+                self.sb.sleep(1)
+
+                check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
+                self.sb.sleep(0.8)
+                check_out_element.click()
+                logger.info(f"Clicked Check-out date: {check_out_date_label}")
+                self.sb.sleep(0.9)
+
+
+                done_button_xpath = "//button[@aria-label='Done']"
+                self.sb.click(done_button_xpath)
+                logger.info("Successfully clicked the 'Done' button.")
+                self.sb.sleep(1)
+            except Exception as e:
+                logger.warning(f"Could not click the 'Done' button: {e}")
+
+        def convert_date_format(
+                date_string: str,
+                input_format: str = "%Y-%m-%d",
+                output_format: str = "%a %b %d %Y"
+        ) -> str:
+            """
+            Converts a date string from one format to another.
+
+            Args:
+                date_string: The original date string (e.g., "2026-01-12").
+                input_format: The format of the original date string (e.g., "%Y-%m-%d").
+                output_format: The desired format for the output date string
+                               (e.g., "%a %b %d %Y" for 'Mon Jan 12 2026').
+
+            Returns:
+                The date string in the new specified format.
+            """
+            try:
+                # Parse the original string into a datetime object
+                date_object = datetime.strptime(date_string, input_format)
+
+                # Format the datetime object into the desired output string
+                new_date_str = date_object.strftime(output_format)
+
+                return new_date_str
+
+            except ValueError as e:
+                logger.info(f"Error converting date '{date_string}': {e}")
+                return date_string
+
+        check_in_date_label = convert_date_format(self.check_in_date)
+        check_out_date_label = convert_date_format(self.check_out_date)
+
+        check_in_month_year = convert_date_format(self.check_in_date, output_format="%B %Y")
+        check_out_month_year = convert_date_format(self.check_out_date, output_format="%B %Y")
+
+        select_check_in_check_out(
+            check_in_date_label,
+            check_out_date_label,
+            check_in_month_year,
+            check_out_month_year
+        )
+
+        logger.info("Date selection complete.")
+
+        # Select 'Use Points'
+        if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
+            return False
+        self.sb.sleep(3)
+
+        # Click 'Find Hotels'
+        if not self._safe_click("button.update-search-btn", "find hotel button"):
+            return False
+
+        self.sb.sleep(9)
+        # self.sb.focus("body")
+        self.sb.save_screenshot("list_page.png")
+
+        view_rates_xpath = "//a[contains(@class, 'view-rates-button-container')]/button"
+        self.sb.wait_for_element_visible(view_rates_xpath, timeout=240)
+        self.sb.click(view_rates_xpath)
+        self.sb.sleep(9)
+        # self.sb.focus("body")
+
+        logger.info("Clicked 'View Rates' successfully!")
+        # self.sb.scroll_to_bottom()
+        # copyright_selector = ".mt-copyright-component"
+        #
+        # logger.info(f"Starting slow scroll to element: {copyright_selector}...")
+        #
+        # # 3. Perform the smooth scroll
+        # self.sb.scroll_to_element(copyright_selector)
+        self.sb.scroll_to_bottom()
+        self.sb.sleep(3)
+        self.sb.scroll_to_top()
+        # self.sb.scroll_to(
+        #     selector=copyright_selector,
+        #     duration=random.randint(1, 3),  # Scroll time (3 seconds for a noticeable, slow animation)
+        #     offset="-100",  # Optional: Scrolls to 100 pixels above the element (useful for viewing)
+        #     by_js=True  # Ensures the smooth JavaScript animation runs
+        # )
+
+        logger.info("Slow scroll finished. Element is now in view.")
+
+
+        self.sb.sleep(5)
+
+        self.sb.save_screenshot("room_page.png")
+        return True
+
+
+    def _extract_html_and_parse(self):
+        """Extracts the entire room list HTML and calls the parser."""
+
+        try:
+            logger.info("Scrolling entire page to load room cards...")
+
+            # Extract page HTML after scrolling
+            html = self.sb.get_attribute("body", "outerHTML")
+            logger.info(f"Extracted HTML length: {len(html)}")
+
+            self.structured_room_data = self._parse_room_cards_html(html)
+
+            logger.info(f"Parsed {len(self.structured_room_data)} rooms.")
+
+        except Exception as e:
+            logger.error(f"Critical HTML extraction error: {e}")
+            self.structured_room_data = []
+
+
+    def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count=1):
+        """Main method to run the complete scraping process and return client response."""
         hotel_id_name = hotel_id
         parts = hotel_id_name.split("-", 1)
         hotel_id = parts[0].strip()
         logger.info(f"Hotel ID: {hotel_id}")
-        hotel_name = parts[1].strip() if len(parts) > 1 else ""
-        logger.info(f"Hotel Name: {hotel_name}")
-        encoded_hotel_name = quote(hotel_name, safe="")
+        location = parts[1].strip() if len(parts) > 1 else ""
+        logger.info(f"Hotel Name: {location}")
+        self.location = location
+        self.check_in_date = check_in_date
+        self.check_out_date = check_out_date
+        final_response = self.build_response(success=False, data=[], status_code=500,
+                                             error_message="Scraping process did not complete successfully.")
 
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(
-                    headless=True,
-                    proxy=proxy,
-                    args=[
-                        "--disable-blink-features=AutomationControlled",
-                        "--start-maximized",
-                        "--disable-dev-shm-usage",
-                        "--no-sandbox",
-                        "--disable-gpu",
+            with SB(
+                    uc=True,
+                    undetectable=True,
+                    locale="en_US",
+                    do_not_track=True,
+                    incognito=True,
+                    proxy=self.proxy_url,
+                    # proxy_bypass_list="*",
+                    agent=self.selected_user_agent,
+                    ad_block=False,
+                    disable_csp=False,
+                    chromium_arg=[
+                        # "--headless=new"    ### make uncomment for docker
                         "--disable-infobars",
-                        "--ignore-certificate-errors",
-                        "--enable-features=NetworkService,NetworkServiceInProcess"
+                        "--no_sandbox",
+                        "--disable_gpu",
+                        "--disable-dev-shm-usage",
+                        "--window-size=1280,800",
+                        "--start-maximized"
                     ],
-                )
-                try:
-                    logger.info("Sending Home page request....")
-                    extra_headers = {
-                        k: v for k, v in _headers.items() if k.lower() != "user-agent"
-                    }
+                    timeout_multiplier=2.0,
+                    slow=True,
+                    headless=False,
+                    browser="chrome"
+            ) as sb:
 
-                    logger.info(f"Selected UA: {_headers['user-agent']}")
+                sb.set_window_size(1280 + random.randint(-100, 100),
+                                   720 + random.randint(-50, 50))
+                sb.sleep(0.2)
+                self.sb = sb
 
-                    context = browser.new_context(
-                        user_agent=_headers["user-agent"],
-                        locale="en-US",
-                        extra_http_headers=extra_headers,
-                    )
+                # Navigate and Search
+                if not self._navigate_and_search():
+                    logger.error("Navigation or Search phase failed due to locator timeout.")
+                    final_response = self.build_response(success=False, data=[], status_code=408,
+                                                         error_message="Navigation or Search failed due to locator timeout or missing element.")
+                    return final_response
 
-                    page = context.new_page()
-                    page.set_default_timeout(100000)
+                self._extract_html_and_parse()
+                self.sb.sleep(3)
 
-                    for attempt in range(1, max_retries + 1):
-                        try:
-                            page.goto("https://www.marriott.com/default.mi", wait_until="load", timeout=120000)
-                            human_delay(6, 12)
+        except Exception as e:
+            logger.critical(f"A fatal error occurred during the scraping process: {e}")
+            final_response = self.build_response(success=False, data=[], status_code=500,
+                                                 error_message=f"A fatal exception occurred: {type(e).__name__}")
+            return final_response
 
-                            page.get_by_role("button", name="Find Hotels").wait_for(timeout=120000)
-
-                            logger.info("Home page request completed successfully.....")
-
-                            # ---- Mouse movement ----
-                            logger.info("Sleeping for few seconds for mouse movement.....")
-                            human_delay(2, 5)
-                            page.mouse.move(rand.randint(0, 2), rand.randint(3, 8))
-                            page.mouse.down()
-                            page.mouse.move(0, rand.randint(100, 120))
-                            page.mouse.move(rand.randint(100, 120), rand.randint(100, 120))
-                            page.mouse.move(rand.randint(100, 120), 0)
-                            page.mouse.move(0, 0)
-                            page.mouse.up()
-
-                            page.keyboard.press("PageDown")
-                            human_delay(1, 3)
-                            page.keyboard.press("PageUp")
-                            human_delay(2, 4)
-
-                            logger.info("Mouse movement completed.....")
-                            break
-
-                        except PlaywrightTimeoutError as pwex:
-                            logger.warning(f"Attempt {attempt} failed: {pwex}")
-                            if attempt < max_retries:
-                                time.sleep(2)
-                            else:
-                                return self.build_response(success=False,
-                                                           data={"details": f"Failed after retries: {pwex}"},
-                                                           status_code=103)
-
-                    # ---- Room rates API calls ----s
-                    cookies = context.cookies()
-                    cookie_header = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
-
-                    # ---------- Book Property Page ----------
-                    BookPropertyUrl = "https://www.marriott.com/mi/query/PhoenixBookProperty"
-                    BookPropertyPayload = json.dumps({
-                        "operationName": "PhoenixBookProperty",
-                        "variables": {
-                            "propertyId": hotel_id.upper()
-                        },
-                        "query": "query PhoenixBookProperty($propertyId: ID!) {\n  property(id: $propertyId) {\n    ... on Hotel {\n      basicInformation {\n        ... on HotelBasicInformation {\n          descriptions {\n            type {\n              code\n              __typename\n            }\n            text\n            __typename\n          }\n          isAdultsOnly\n          resort\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
-                    })
-                    session.headers.update({
-                        'host': 'www.marriott.com',
-                        'application-name': 'book',
-                        'x-request-id': '',
-                        'sec-ch-ua-platform': _headers["sec-ch-ua-platform"],
-                        'user-agent': _headers["user-agent"],
-                        'sec-ch-ua': _headers["sec-ch-ua"],
-                        'sec-ch-ua-mobile': _headers["sec-ch-ua-mobile"],
-                        'graphql-operation-name': 'PhoenixBookProperty',
-                        'graphql-force-safelisting': 'true',
-                        'accept': '*/*',
-                        'apollographql-client-version': '1',
-                        'content-type': 'application/json',
-                        'apollographql-client-name': 'phoenix_book',
-                        'graphql-require-safelisting': 'true',
-                        'accept-language': 'en-US',
-                        'graphql-operation-signature': '9f165424df22961c9a0d1664c26b9130e2fcf0318bc78c25972cc2e505455376',
-                        'origin': 'https://www.marriott.com',
-                        'sec-fetch-site': 'same-origin',
-                        'sec-fetch-mode': 'cors',
-                        'sec-fetch-dest': 'empty',
-                        'referer': 'https://www.marriott.com/reservation/rateListMenu.mi',
-                        'accept-encoding': 'gzip, deflate, br, zstd',
-                        'cookie': cookie_header,
-                    })
-
-                    BookPropertyResponse = session.post(url=BookPropertyUrl, data=BookPropertyPayload)
-                    logger.info(f"PhoenixBookProperty Status: {BookPropertyResponse.status_code}")
-                    logger.info(f"PhoenixBookProperty Data: {BookPropertyResponse.text[:200]}")
-
-                    # ---------- Rate List API ----------
-                    api_url = "https://www.marriott.com/mi/query/PhoenixBookSearchProductsByProperty"
-                    api_payload = json.dumps({
-                          "operationName": "PhoenixBookSearchProductsByProperty",
-                          "variables": {
-                            "search": {
-                              "options": {
-                                "startDate": check_in_date,
-                                "endDate": check_out_date,
-                                "quantity": 1,
-                                "numberInParty": guest_count,
-                                "childAges": [],
-                                "productRoomType": [
-                                  "ALL"
-                                ],
-                                "productStatusType": [
-                                  "AVAILABLE"
-                                ],
-                                "rateRequestTypes": [
-                                  {
-                                    "value": "",
-                                    "type": "STANDARD"
-                                  },
-                                  {
-                                    "value": "",
-                                    "type": "PREPAY"
-                                  },
-                                  {
-                                    "value": "",
-                                    "type": "PACKAGES"
-                                  },
-                                  {
-                                    "value": "MRM",
-                                    "type": "CLUSTER"
-                                  },
-                                  {
-                                    "value": "",
-                                    "type": "REDEMPTION"
-                                  }
-                                ],
-                                "isErsProperty": False
-                              },
-                              "propertyId": hotel_id.upper()
-                            },
-                            "offset": 0,
-                            "limit": 150
-                          },
-                          "query": "query PhoenixBookSearchProductsByProperty($search: ProductByPropertySearchInput, $offset: Int, $limit: Int) {\n  searchProductsByProperty(search: $search, offset: $offset, limit: $limit) {\n    edges {\n      node {\n        ... on HotelRoom {\n          availabilityAttributes {\n            rateCategory {\n              type {\n                code\n                __typename\n              }\n              value\n              __typename\n            }\n            isNearSellout\n            __typename\n          }\n          rates {\n            name\n            description\n            rateAmounts {\n              amount {\n                origin {\n                  amount\n                  currency\n                  valueDecimalPoint\n                  __typename\n                }\n                __typename\n              }\n              points\n              pointsSaved\n              pointsToPurchase\n              __typename\n            }\n            localizedDescription {\n              translatedText\n              sourceText\n              __typename\n            }\n            localizedName {\n              translatedText\n              sourceText\n              __typename\n            }\n            rateAmountsByMode {\n              averageNightlyRatePerUnit {\n                amount {\n                  origin {\n                    amount\n                    currency\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          basicInformation {\n            type\n            name\n            localizedName {\n              translatedText\n              __typename\n            }\n            description\n            localizedDescription {\n              translatedText\n              __typename\n            }\n            membersOnly\n            oldRates\n            representativeRoom\n            housingProtected\n            actualRoomsAvailable\n            depositRequired\n            roomsAvailable\n            roomsRequested\n            ratePlan {\n              ratePlanType\n              ratePlanCode\n              marketCode\n              __typename\n            }\n            freeCancellationUntil\n            __typename\n          }\n          roomAttributes {\n            attributes {\n              id\n              description\n              groupID\n              category {\n                code\n                description\n                __typename\n              }\n              accommodationCategory {\n                code\n                description\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          totalPricing {\n            quantity\n            rateAmountsByMode {\n              grandTotal {\n                amount {\n                  origin {\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              subtotalPerQuantity {\n                amount {\n                  origin {\n                    currency\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              totalMandatoryFeesPerQuantity {\n                amount {\n                  origin {\n                    currency\n                    value: amount\n                    valueDecimalPoint\n                    __typename\n                  }\n                  __typename\n                }\n                __typename\n              }\n              __typename\n            }\n            __typename\n          }\n          id\n          __typename\n        }\n        id\n        __typename\n      }\n      __typename\n    }\n    total\n    status {\n      ... on UserInputError {\n        httpStatus\n        messages {\n          user {\n            message\n            field\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      ... on DateRangeTooLongError {\n        httpStatus\n        messages {\n          user {\n            message\n            field\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n"
-                    })
-
-                    session.headers.update({
-                        'graphql-operation-name': 'PhoenixBookSearchProductsByProperty',
-                        'graphql-operation-signature': 'a1079a703a2d21d82c0c65e4337271c3029c69028c6189830f30882170075756',
-                    })
-
-                    logger.info(f"Navigating to roomrate API :: {api_url}")
-
-                    response = session.post(url=api_url, data=api_payload)
-
-                    logger.info(f"Final Page Status: {response.status_code}")
-                    logger.info(f"Final Page Data: {response.text[:200]}")
-
-                    decodedResponse = response.text
-                    if '"Invalid Property Code"' in decodedResponse:
-                        logging.error("Property Code is invalid.")
-                        message = {
-                            "details": "Property Code is invalid."
-                        }
-                        return self.build_response(success=True, data=message, status_code=response.status_code)
-
-                    data_json = None
-                    if response.status_code == 200 and decodedResponse:
-                        try:
-                            data_json = json.loads(decodedResponse)
-                        except Exception as e:
-                            message = {
-                                "details": f"Response Json not available {e}"
-                            }
-                            return self.build_response(success=False, data=message, status_code=response.status_code)
-
-                    if response.status_code == 200 and data_json and '"code":"standard"' in decodedResponse and '"code":"redemption"' in decodedResponse:
-                        logger.info(f"Response fetched successfully from Roomrate API")
-                        return self.build_response(success=True, data=data_json, status_code=response.status_code)
-                    elif response.status_code == 200 and data_json and '"code":"standard"' in decodedResponse and '"code":"redemption"' not in decodedResponse:
-                        logger.error(f"Hotel is not available at selected date.")
-                        message = {
-                            "details": "Hotel is not available at selected date."
-                        }
-                        return self.build_response(success=True, data=message, status_code=response.status_code)
-                    else:
-                        logger.error(f"Roomrate API failed with status {response.status_code}")
-                        message = {
-                            "details": f"Roomrate API failed with status {response.status_code}"
-                        }
-                        return self.build_response(success=False, data=message, status_code=response.status_code)
-
-                except Exception as ex:
-                    logger.exception(f"Exception occurred during scraping: {ex}")
-                    message = {
-                        "details": f"Exception occurred during scraping: {ex}"
-                    }
-                    return self.build_response(success=False, data=message, status_code=103)
-
-                finally:
-                    logger.info("Closing browser...")
-                    browser.close()
-        except Exception as ex:
-            logger.exception(f"Critical Error: {ex}")
-            message = {
-                "details": f"Critical Error: {ex}"
-            }
-            return self.build_response(success=False, data=message, status_code=100)
+        if self.structured_room_data:
+            logger.info("Data extraction successful. Returning 200.")
+            final_response = self.build_response(success=True, data=self.structured_room_data, status_code=200)
+        else:
+            logger.warning("Scraping completed, but no room data was extracted.")
+            final_response = self.build_response(success=False, data=[], status_code=204,
+                                                 error_message="Search successful, but no room data found for the criteria.")
+        return final_response
 
 
-if __name__ =="__main__":
-    crawl = ExtractMarriott()
-    data = crawl.get_search_data(
-        hotel_id="snabp-courtyard-anaheim-buena-park",
-        check_in_date="2025-11-04",
-        check_out_date="2025-11-08",
-        guest_count=1,
-    )
-    if data:
-        print("API data fetched successfully")
-    else:
-        print("API data could not be fetched with current cookies")
+if __name__ == '__main__':
+    scraper = ExtractMarriott()
+
+    data = scraper.get_search_data(hotel_id="snabp-courtyard-anaheim-buena-park", check_in_date="2026-01-12",
+                                   check_out_date="2026-02-11" , guest_count=1)
+    print(json.dumps(data, indent=4))
