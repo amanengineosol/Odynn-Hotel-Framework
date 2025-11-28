@@ -7,29 +7,13 @@ from seleniumbase import SB
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
 from mycdp.network import PrivateNetworkRequestPolicy
+from urllib.parse import urlparse
 
 # Gracefully handle new Chrome value
 try:
     PrivateNetworkRequestPolicy("PermissionBlock")
 except ValueError:
     PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
-
-import mycdp.util
-
-_event_parsers = mycdp.util._event_parsers
-
-def patched_parse_event(data):
-    method = data.get("method")
-    params = data.get("params", {})
-    parser = _event_parsers.get(method)
-
-    if parser is None:
-        # ignore unknown CDP events
-        return None
-
-    return parser.from_json(params)
-
-mycdp.util.parse_json_event = patched_parse_event
 
 # --- SETUP LOGGING ---
 # Configure the logger for the module
@@ -51,25 +35,69 @@ if not logger.handlers:
 
 # --- CONFIGURATION (Global Constants) ---
 
-USER_AGENT_POOL = [
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    # "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:141.0) Gecko/20100101 Firefox/141.0",
-    # "Mozilla/5.0 (X11; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
-    # "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:141.0) Gecko/20100101 Firefox/141.0",
-    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+Linux_USER_AGENT_POOL = [
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/142.0.7444.163 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.59 Safari/537.36",
+    "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Linux; Ubuntu 24.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.4334.67 Safari/537.36 Edg/140.0.4334.67",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3022.21 Safari/537.36 Edg/140.0.3022.21",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.4079.95 Safari/537.36 Edg/139.0.4079.95",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.2989.82 Safari/537.36 Edg/139.0.2989.82",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.4812.88 Safari/537.36 Edg/138.0.4812.88",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.3552.64 Safari/537.36 Edg/138.0.3552.64",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.2892.70 Safari/537.36 Edg/141.0.2892.70",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.3767.43 Safari/537.36 Edg/141.0.3767.43",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.1295.15 Safari/537.36 Edg/140.0.1295.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
+    # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/542.72 (KHTML, like Gecko) Brave/142.0.739.140 Safari/542.72",
+    # ####NW "Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/542.43 (KHTML, like Gecko) Brave/141.0.4453.55 Safari/542.43",
+    # ####NW "Mozilla/5.0 (X11; Ubuntu; Linux i686) AppleWebKit/542.07 (KHTML, like Gecko) Brave/137.0.7048.212 Safari/542.07",
+    # ####NW "Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.4200.8293 Brave/111.0.2935.16 Safari/537.36",
+    # ####NW "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.9765.9353 Brave/137.0.7740.642 Safari/537.36",
+    # ####NW "Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/538.51 (KHTML, like Gecko) Brave/140.0.6992.144 Safari/538.51",
+    # ####NW "Mozilla/5.0 (X11; Fedora; Linux x86_64) AppleWebKit/540.51 (KHTML, like Gecko) Brave/138.0.2093.219 Safari/540.51",
+    # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Brave Browser/114.0.5735.127 Safari/537.36",
+    # ####SW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0 Brave Browser/142.1.85.97 Safari/537.36",
+    # ####SW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Brave Browser/110.0.0.0 Safari/537.36",
+    # ####NW "Mozilla/5.0 (X11; Ubuntu; Linux i686) AppleWebKit/542.12 (KHTML, like Gecko) Brave/138.0.891.272 Safari/542.12",
+    # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/542.15 (KHTML, like Gecko) Brave/138.0.165.170 Safari/542.15",
+    # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/540.02 (KHTML, like Gecko) Brave/138.0.1257.319 Safari/540.02",
+    # ####NW "Mozilla/5.0 (X11; Ubuntu; Linux i686) AppleWebKit/542.47 (KHTML, like Gecko) Brave/140.0.1420.39 Safari/542.47",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
 ]
+Widnows_USER_AGENT_POOL = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.9765.9353 Brave/137.0.7740.642 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Brave Browser/142.0.3595.53 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/543.24 (KHTML, like Gecko) Brave/137.0.5430.302 Safari/543.24",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6511.3 Safari/537.36 Brave/1.59.134",
+    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/541.79 (KHTML, like Gecko) Brave/138.0.7722.25 Safari/541.79",
+    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Brave Chrome/86.0.4240.111 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/542.24 (KHTML, like Gecko) Brave/136.0.2809.10 Safari/542.24",
+    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/539.39 (KHTML, like Gecko) Brave/139.0.1483.30 Safari/539.39",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+]
+
 BASE_URL = "https://www.marriott.com/default.mi"
 
 class ExtractMarriott:
@@ -83,15 +111,15 @@ class ExtractMarriott:
         self.check_in_date = None
         self.check_out_date = None
         self.location = None
-        self.user_agent_pool = USER_AGENT_POOL
-        self.selected_user_agent = random.choice(self.user_agent_pool)
+        self.hotel_id = None
+        self.marsha_code = None
+        self.user_agent_pool = None
+        self.selected_user_agent = None
         self.proxy_url = self._get_proxy()
 
         # State
         self.structured_room_data = []
         self.sb = None
-        logger.info(f"Using User-Agent: {self.selected_user_agent}")
-        # logger.info(f"Using Proxy: {self.proxy_url}")
 
     def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
         """Standardizes the response format for the client."""
@@ -107,7 +135,6 @@ class ExtractMarriott:
     def _get_proxy(self):
         """Fetches the proxy URL from the ProxyManager utility."""
         try:
-            # Assuming ProxyManager is available and working
             from .proxy_manager import ProxyManager
             return ProxyManager().fetch_proxy()
 
@@ -129,8 +156,54 @@ class ExtractMarriott:
             self.sb.set_content(html_content)
             self.sb.sleep(0.9)
 
+            def find_elements_with_retry(selector: str, max_retries: int = 1) -> list:
+                """
+                Attempts to find elements. If none are found, reloads the page
+                and tries again up to max_retries times.
+
+                Args:
+                    sb: The SeleniumBase SB instance.
+                    selector: The CSS selector for the elements (e.g., "div[data-testid='RateCardV2']").
+                    max_retries: The number of times to reload and retry after the first failure.
+
+                Returns:
+                    A list of web elements found, or an empty list.
+                """
+                url = self.sb.get_current_url()
+
+                for attempt in range(max_retries + 1):
+                    try:
+                        # Use sb.find_elements which should return an empty list if nothing is found
+                        room_cards = self.sb.find_elements(selector)
+
+                        if len(room_cards) > 0:
+                            logger.info(f"Attempt {attempt + 1}: Found {len(room_cards)} room cards.")
+                            return room_cards
+
+                        logger.warning(f"Attempt {attempt + 1}: Found 0 room cards for selector '{selector}'.")
+
+                    except TimeoutException:
+                        # In some SeleniumBase versions, find_elements might still raise TimeoutException
+                        # if the page is unstable. We treat this as a failure.
+                        logger.warning(f"Attempt {attempt + 1}: Timeout while searching for elements.")
+
+                    # If we didn't find cards and have retries left, reload the page
+                    if attempt < max_retries:
+                        logger.info(f"Attempt {attempt + 1} failed. Reloading page and retrying...")
+                        self.sb.reload_page()
+                        self.sb.wait_for_element_visible(selector, timeout=20)
+                        self.sb.scroll_to_bottom()
+                        time.sleep(1)
+                        self.sb.scroll_to_top()
+
+
+                # If all attempts fail, return an empty list
+                logger.critical(f"Failed to find elements for selector '{selector}' after {max_retries + 1} attempts.")
+                return []
+
             # SELECT ALL ROOM CARDS
-            room_cards = self.sb.find_elements("div[data-testid='RateCardV2']")
+            selector = "div[data-testid='RateCardV2']"
+            room_cards = find_elements_with_retry(selector, max_retries=1)
             logger.info(f"Found {len(room_cards)} room cards.")
 
             for card in room_cards:
@@ -208,8 +281,8 @@ class ExtractMarriott:
             return False
 
     def _safe_type(self, selector: str, text: str, description: str,
-                   min_delay: float = 0.01, max_delay: float = 0.3,
-                   hesitation_chance: float = 0.04):
+                   min_delay: float = 0.03, max_delay: float = 0.8,
+                   hesitation_chance: float = 0.05):
 
         """
         Types text into an input field using real human-like keystrokes.
@@ -233,7 +306,7 @@ class ExtractMarriott:
 
                 # occasional longer hesitation (human behavior)
                 if random.random() < hesitation_chance:
-                    time.sleep(random.uniform(0.1, 0.4))
+                    time.sleep(random.uniform(0.4, 0.8))
 
             logger.info(f"Successfully typed '{text}' into: {description} ({selector})")
             return True
@@ -259,8 +332,6 @@ class ExtractMarriott:
         except WebDriverException as e:
             logger.critical(f"Failed to navigate or activate CDP mode. Error: {e}")
             return False
-
-        # self.sb.focus("body")
 
         # 2. Set Location
         if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
@@ -423,41 +494,50 @@ class ExtractMarriott:
             return False
 
         self.sb.sleep(9)
-        # self.sb.focus("body")
         self.sb.save_screenshot("list_page.png")
 
-        view_rates_xpath = "//a[contains(@class, 'view-rates-button-container')]/button"
-        self.sb.wait_for_element_visible(view_rates_xpath, timeout=240)
-        self.sb.click(view_rates_xpath)
-        self.sb.sleep(9)
-        # self.sb.focus("body")
+        PROPERTY_CARD_SELECTOR = 'div.property-card[data-marsha]'
 
-        logger.info("Clicked 'View Rates' successfully!")
-        # self.sb.scroll_to_bottom()
-        # copyright_selector = ".mt-copyright-component"
-        #
-        # logger.info(f"Starting slow scroll to element: {copyright_selector}...")
-        #
-        # # 3. Perform the smooth scroll
-        # self.sb.scroll_to_element(copyright_selector)
-        self.sb.scroll_to_bottom()
-        self.sb.sleep(3)
-        self.sb.scroll_to_top()
-        # self.sb.scroll_to(
-        #     selector=copyright_selector,
-        #     duration=random.randint(1, 3),  # Scroll time (3 seconds for a noticeable, slow animation)
-        #     offset="-100",  # Optional: Scrolls to 100 pixels above the element (useful for viewing)
-        #     by_js=True  # Ensures the smooth JavaScript animation runs
-        # )
+        self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=60)
 
-        logger.info("Slow scroll finished. Element is now in view.")
+        self.marsha_code = self.sb.get_attribute(PROPERTY_CARD_SELECTOR, 'data-marsha')
 
+        logger.info(f"First listed hotel is: {self.marsha_code}")
 
-        self.sb.sleep(5)
+        if self.hotel_id.lower() != self.marsha_code.lower():
+            logger.info(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+            final_response = self.build_response(success=False, data=[], status_code=102,
+                                                 error_message=f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+            return final_response
 
-        self.sb.save_screenshot("room_page.png")
-        return True
+        else:
+            logger.info(f"Input hotel {self.hotel_id.lower()} matched with first listed hotel: {self.marsha_code}")
+            view_rates_xpath = "//a[contains(@class, 'view-rates-button-container')]/button"
+            self.sb.wait_for_element_visible(view_rates_xpath, timeout=240)
 
+            if not self._safe_click(view_rates_xpath, "view_rates button"):
+                return False
+
+            ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"]'
+
+            try:
+                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=20)
+            except Exception as e:
+                logger.error(f"Timed out waiting for room rates to render. Error: {e}")
+                return False
+            logger.info("Clicked 'View Rates' successfully!")
+
+            self.sb.scroll_to_bottom()
+            self.sb.sleep(3)
+
+            logger.info("Slow scroll finished. Element is now in view.")
+            self.sb.sleep(5)
+            # html = self.sb.get_page_source()
+            # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
+            #     f.write(html)
+
+            self.sb.save_screenshot("room_page.png")
+            return True
 
     def _extract_html_and_parse(self):
         """Extracts the entire room list HTML and calls the parser."""
@@ -483,40 +563,59 @@ class ExtractMarriott:
         hotel_id_name = hotel_id
         parts = hotel_id_name.split("-", 1)
         hotel_id = parts[0].strip()
+        self.hotel_id = hotel_id
         logger.info(f"Hotel ID: {hotel_id}")
         location = parts[1].strip() if len(parts) > 1 else ""
         logger.info(f"Hotel Name: {location}")
         self.location = location
         self.check_in_date = check_in_date
         self.check_out_date = check_out_date
+        url = self.proxy_url
+        if "://" not in url:
+            url = "http://" + url  # add temporary scheme for parsing
+
+        parsed = urlparse(url)
+        if "smart" in parsed.hostname:
+            host = "smt"
+        elif "private" in parsed.hostname:
+            host = "pvt"
+        elif "oxylabs" in parsed.hostname:
+            host = "aux"
+        else:
+            host = None
+        logger.info(f"Using Proxy: {host}:{parsed.port}")
+        self.user_agent_pool = Linux_USER_AGENT_POOL
+        # self.user_agent_pool = Widnows_USER_AGENT_POOL
+        self.selected_user_agent = random.choice(self.user_agent_pool)
+        logger.info(f"Using User-Agent: {self.selected_user_agent}")
         final_response = self.build_response(success=False, data=[], status_code=500,
                                              error_message="Scraping process did not complete successfully.")
 
         try:
             with SB(
-                    uc=True,
-                    undetectable=True,
-                    locale="en_US",
-                    do_not_track=True,
-                    incognito=True,
-                    proxy=self.proxy_url,
-                    # proxy_bypass_list="*",
-                    agent=self.selected_user_agent,
-                    ad_block=False,
-                    disable_csp=False,
-                    chromium_arg=[
-                        # "--headless=new"    ### make uncomment for docker
-                        "--disable-infobars",
-                        "--no_sandbox",
-                        "--disable_gpu",
-                        "--disable-dev-shm-usage",
-                        "--window-size=1280,800",
-                        "--start-maximized"
-                    ],
-                    timeout_multiplier=2.0,
-                    slow=True,
-                    headless=False,
-                    browser="chrome"
+                uc=True,
+                undetectable=True,
+                locale="en_US",
+                do_not_track=True,
+                incognito=True,
+                proxy=self.proxy_url,
+                agent=self.selected_user_agent,
+                ad_block=True,
+                disable_csp=False,
+                chromium_arg=[
+                    "--headless=new"    ### make uncomment for docker
+                    "--disable-infobars",
+                    "--no_sandbox",
+                    "--disable_gpu",
+                    "--disable-dev-shm-usage",
+                    "--window-size=1280,800",
+                    "--start-maximized"
+                ],
+                timeout_multiplier=2.0,
+                # slow=True,
+                headless=True,
+                # browser="chrome",
+                # page_load_strategy="eager"
             ) as sb:
 
                 sb.set_window_size(1280 + random.randint(-100, 100),
@@ -525,12 +624,21 @@ class ExtractMarriott:
                 self.sb = sb
 
                 # Navigate and Search
-                if not self._navigate_and_search():
+                navigation = self._navigate_and_search()
+
+                if not navigation:
                     logger.error("Navigation or Search phase failed due to locator timeout.")
                     final_response = self.build_response(success=False, data=[], status_code=408,
                                                          error_message="Navigation or Search failed due to locator timeout or missing element.")
                     return final_response
 
+                if isinstance(navigation, dict) and not navigation.get("success", True):
+                    logger.error(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+                    final_response = self.build_response(success=False, data=[], status_code=102,
+                                                         error_message=f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+                    return final_response
+
+                logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
                 self.sb.sleep(3)
 
@@ -554,5 +662,5 @@ if __name__ == '__main__':
     scraper = ExtractMarriott()
 
     data = scraper.get_search_data(hotel_id="snabp-courtyard-anaheim-buena-park", check_in_date="2026-01-12",
-                                   check_out_date="2026-02-11" , guest_count=1)
+                                   check_out_date="2026-01-14" , guest_count=1)
     print(json.dumps(data, indent=4))
