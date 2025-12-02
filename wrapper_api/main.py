@@ -46,12 +46,12 @@ async def load_hotel_map():
     with open("hotel_hyatt_mappings.csv", mode="r", encoding="utf-8") as hyatt_mapping:
         hyatt_reader = csv.DictReader(hyatt_mapping)
         for row in hyatt_reader:
-            h_id = str(row['hotel_id']).lower()
+            h_id = str(row['hotel_site_id']).lower()
             HOTEL_MAP[h_id] = row['combined']
     with open("hotels_marriott_mappings.csv", mode="r", encoding="utf-8") as marriott_mapping:
         marriott_reader = csv.DictReader(marriott_mapping)
         for row in marriott_reader:
-            h_id = str(row['hotel_id']).lower()
+            h_id = str(row['hotel_site_id']).lower()
             HOTEL_MAP[h_id] = row['combined']
     print("HOTEL Mapping Done....................######################################## ")
 
@@ -95,7 +95,12 @@ app.add_middleware(ExceptionMiddleware)
 async def hotel_wrapper(request_body: HotelRequest):
     try:
         original_hotel_id = str(request_body.parameter.get("hotel_id")).lower()
-        combined_hotel_id = HOTEL_MAP.get(original_hotel_id)
+        print(original_hotel_id)
+        site_name = str(request_body.site_name).lower()
+        print(site_name)
+        lookup_name = site_name+"-"+original_hotel_id
+        print(lookup_name)
+        combined_hotel_id = HOTEL_MAP.get(lookup_name)
         logger.info("Hotel combined %s", combined_hotel_id)
         if not combined_hotel_id:
             raise HTTPException(status_code=404, detail="Hotel not found")
