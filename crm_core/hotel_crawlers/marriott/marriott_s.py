@@ -15,6 +15,23 @@ try:
 except ValueError:
     PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
 
+import mycdp.util
+
+_event_parsers = mycdp.util._event_parsers
+
+def patched_parse_event(data):
+    method = data.get("method")
+    params = data.get("params", {})
+    parser = _event_parsers.get(method)
+
+    if parser is None:
+        # ignore unknown CDP events
+        return None
+
+    return parser.from_json(params)
+
+mycdp.util.parse_json_event = patched_parse_event
+
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('MarriottScraper')
@@ -40,25 +57,25 @@ Linux_USER_AGENT_POOL = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.59 Safari/537.36",
-    "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Linux; Ubuntu 24.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.4334.67 Safari/537.36 Edg/140.0.4334.67",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3022.21 Safari/537.36 Edg/140.0.3022.21",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.4079.95 Safari/537.36 Edg/139.0.4079.95",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.2989.82 Safari/537.36 Edg/139.0.2989.82",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.4812.88 Safari/537.36 Edg/138.0.4812.88",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.3552.64 Safari/537.36 Edg/138.0.3552.64",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.2892.70 Safari/537.36 Edg/141.0.2892.70",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.3767.43 Safari/537.36 Edg/141.0.3767.43",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.1295.15 Safari/537.36 Edg/140.0.1295.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.4334.67 Safari/537.36 Edg/140.0.4334.67",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3022.21 Safari/537.36 Edg/140.0.3022.21",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.4079.95 Safari/537.36 Edg/139.0.4079.95",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.2989.82 Safari/537.36 Edg/139.0.2989.82",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.4812.88 Safari/537.36 Edg/138.0.4812.88",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.3552.64 Safari/537.36 Edg/138.0.3552.64",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.2892.70 Safari/537.36 Edg/141.0.2892.70",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.3767.43 Safari/537.36 Edg/141.0.3767.43",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.1295.15 Safari/537.36 Edg/140.0.1295.15",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36 Edg/140.0.0.0",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+    # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.s0.0.0 Safari/537.36 Edg/138.0.0.0",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0",
     # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/542.72 (KHTML, like Gecko) Brave/142.0.739.140 Safari/542.72",
@@ -121,16 +138,12 @@ class ExtractMarriott:
         self.structured_room_data = []
         self.sb = None
 
-    def build_response(self, success: bool, data: any, status_code: int, error_message: str = None):
-        """Standardizes the response format for the client."""
-        response = {
+    def build_response(self, success: bool, data: any, status_code: int):
+        return {
             "success": success,
             "data": data,
             "status_code": status_code
         }
-        if error_message:
-            response['error'] = error_message
-        return response
 
     def _get_proxy(self):
         """Fetches the proxy URL from the ProxyManager utility."""
@@ -191,7 +204,7 @@ class ExtractMarriott:
                     if attempt < max_retries:
                         logger.info(f"Attempt {attempt + 1} failed. Reloading page and retrying...")
                         self.sb.reload_page()
-                        self.sb.wait_for_element_visible(selector, timeout=20)
+                        self.sb.wait_for_element_visible(selector, timeout=60)
                         self.sb.scroll_to_bottom()
                         time.sleep(1)
                         self.sb.scroll_to_top()
@@ -327,10 +340,17 @@ class ExtractMarriott:
         url = BASE_URL
         logger.info(f"Navigating to base URL: {url}")
         try:
-            self.sb.open(url)
+            # self.sb.open(url)
+            self.sb.activate_cdp_mode(url)
             self.sb.sleep(3.5)
         except WebDriverException as e:
             logger.critical(f"Failed to navigate or activate CDP mode. Error: {e}")
+            return False
+
+        try:
+            self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=90)
+        except Exception as e:
+            logger.error(f"Timed out waiting for home page to render. Error: {e}")
             return False
 
         # 2. Set Location
@@ -342,7 +362,7 @@ class ExtractMarriott:
             return False
 
         self.sb.sleep(3)
-        self.sb.wait_for_element_visible('[role="option"]', timeout=10)
+        self.sb.wait_for_element_visible('[role="option"]', timeout=15)
         self.sb.click('[role="option"]')
         logger.info("Successfully clicked suggestion")
         self.sb.sleep(1)
@@ -493,12 +513,17 @@ class ExtractMarriott:
         if not self._safe_click("button.update-search-btn", "find hotel button"):
             return False
 
-        self.sb.sleep(9)
+        self.sb.sleep(random.uniform(2.9, 4.8))
+
         self.sb.save_screenshot("list_page.png")
 
         PROPERTY_CARD_SELECTOR = 'div.property-card[data-marsha]'
 
-        self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=60)
+        try:
+            self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=90)
+        except Exception as e:
+            logger.error(f"Timed out waiting for list page to render. Error: {e}")
+            return False
 
         self.marsha_code = self.sb.get_attribute(PROPERTY_CARD_SELECTOR, 'data-marsha')
 
@@ -506,14 +531,19 @@ class ExtractMarriott:
 
         if self.hotel_id.lower() != self.marsha_code.lower():
             logger.info(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
-            final_response = self.build_response(success=False, data=[], status_code=102,
-                                                 error_message=f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
-            return final_response
+            message = {
+                "details": f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}",
+            }
+            return self.build_response(success=False, data=message, status_code=102)
 
         else:
             logger.info(f"Input hotel {self.hotel_id.lower()} matched with first listed hotel: {self.marsha_code}")
             view_rates_xpath = "//a[contains(@class, 'view-rates-button-container')]/button"
-            self.sb.wait_for_element_visible(view_rates_xpath, timeout=240)
+            try:
+                self.sb.wait_for_element_visible(view_rates_xpath, timeout=120)
+            except Exception as e:
+                logger.error(f"Timed out waiting for view rates. Error: {e}")
+                return False
 
             if not self._safe_click(view_rates_xpath, "view_rates button"):
                 return False
@@ -521,7 +551,7 @@ class ExtractMarriott:
             ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"]'
 
             try:
-                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=20)
+                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=40)
             except Exception as e:
                 logger.error(f"Timed out waiting for room rates to render. Error: {e}")
                 return False
@@ -588,8 +618,10 @@ class ExtractMarriott:
         # self.user_agent_pool = Widnows_USER_AGENT_POOL
         self.selected_user_agent = random.choice(self.user_agent_pool)
         logger.info(f"Using User-Agent: {self.selected_user_agent}")
-        final_response = self.build_response(success=False, data=[], status_code=500,
-                                             error_message="Scraping process did not complete successfully.")
+        message = {
+            "details": "Scraping process did not complete successfully.",
+        }
+        final_response = self.build_response(success=False, data=message, status_code=500)
 
         try:
             with SB(
@@ -628,15 +660,17 @@ class ExtractMarriott:
 
                 if not navigation:
                     logger.error("Navigation or Search phase failed due to locator timeout.")
-                    final_response = self.build_response(success=False, data=[], status_code=408,
-                                                         error_message="Navigation or Search failed due to locator timeout or missing element.")
-                    return final_response
+                    message = {
+                        "details": "Navigation or Search failed due to locator timeout or missing element.",
+                    }
+                    return self.build_response(success=False, data=message, status_code=408)
 
                 if isinstance(navigation, dict) and not navigation.get("success", True):
                     logger.error(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
-                    final_response = self.build_response(success=False, data=[], status_code=102,
-                                                         error_message=f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
-                    return final_response
+                    message = {
+                        "details": f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}",
+                    }
+                    return self.build_response(success=False, data=message, status_code=102)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
@@ -644,23 +678,25 @@ class ExtractMarriott:
 
         except Exception as e:
             logger.critical(f"A fatal error occurred during the scraping process: {e}")
-            final_response = self.build_response(success=False, data=[], status_code=500,
-                                                 error_message=f"A fatal exception occurred: {type(e).__name__}")
-            return final_response
+            message = {
+                "details": f"A fatal exception occurred: {type(e).__name__}",
+            }
+            return self.build_response(success=False, data=message, status_code=500)
 
         if self.structured_room_data:
             logger.info("Data extraction successful. Returning 200.")
-            final_response = self.build_response(success=True, data=self.structured_room_data, status_code=200)
+            return self.build_response(success=True, data=self.structured_room_data, status_code=200)
         else:
             logger.warning("Scraping completed, but no room data was extracted.")
-            final_response = self.build_response(success=False, data=[], status_code=204,
-                                                 error_message="Search successful, but no room data found for the criteria.")
-        return final_response
+            message = {
+                "details": "Search successful, but no room data found for the criteria.",
+            }
+            return self.build_response(success=False, data=message, status_code=204)
 
 
 if __name__ == '__main__':
     scraper = ExtractMarriott()
 
-    data = scraper.get_search_data(hotel_id="snabp-courtyard-anaheim-buena-park", check_in_date="2026-01-12",
-                                   check_out_date="2026-01-14" , guest_count=1)
+    data = scraper.get_search_data(hotel_id="oxrtc-courtyard-thousand-oaks-agoura-hills", check_in_date="2025-12-19",
+                                   check_out_date="2025-12-20" , guest_count=1)
     print(json.dumps(data, indent=4))
