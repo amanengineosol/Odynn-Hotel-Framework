@@ -97,25 +97,26 @@ Linux_USER_AGENT_POOL = [
 Widnows_USER_AGENT_POOL = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.9765.9353 Brave/137.0.7740.642 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Brave Browser/142.0.3595.53 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/543.24 (KHTML, like Gecko) Brave/137.0.5430.302 Safari/543.24",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6511.3 Safari/537.36 Brave/1.59.134",
-    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/541.79 (KHTML, like Gecko) Brave/138.0.7722.25 Safari/541.79",
-    "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Brave Chrome/86.0.4240.111 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/542.24 (KHTML, like Gecko) Brave/136.0.2809.10 Safari/542.24",
-    "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/539.39 (KHTML, like Gecko) Brave/139.0.1483.30 Safari/539.39",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/999.0.0.0 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.9765.9353 Brave/137.0.7740.642 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0 Brave Browser/142.0.3595.53 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/543.24 (KHTML, like Gecko) Brave/137.0.5430.302 Safari/543.24",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.6511.3 Safari/537.36 Brave/1.59.134",
+#     "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/541.79 (KHTML, like Gecko) Brave/138.0.7722.25 Safari/541.79",
+#     "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Brave Chrome/86.0.4240.111 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/542.24 (KHTML, like Gecko) Brave/136.0.2809.10 Safari/542.24",
+#     "Mozilla/5.0 (Windows NT 12.0; Win64; x64) AppleWebKit/539.39 (KHTML, like Gecko) Brave/139.0.1483.30 Safari/539.39",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+#     "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+#     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0"
 ]
 
-BASE_URL = "https://www.marriott.com/default.mi"
+# BASE_URL = "https://www.marriott.com/default.mi"
+BASE_URL = "https://www.marriott.com"
 
 class ExtractMarriott:
     """
@@ -167,7 +168,7 @@ class ExtractMarriott:
 
         try:
             self.sb.set_content(html_content)
-            self.sb.sleep(0.9)
+            # self.sb.sleep(0.9)
 
             def find_elements_with_retry(selector: str, max_retries: int = 1) -> list:
                 """
@@ -206,7 +207,7 @@ class ExtractMarriott:
                         self.sb.reload_page()
                         self.sb.wait_for_element_visible(selector, timeout=60)
                         self.sb.scroll_to_bottom()
-                        time.sleep(1)
+                        self.sb.sleep(random.uniform(0.3, 0.9))
                         self.sb.scroll_to_top()
 
 
@@ -262,6 +263,75 @@ class ExtractMarriott:
                         points = card.find_element(
                             By.CSS_SELECTOR, ".rate-details .points span"
                         ).text.strip()
+                    except:
+                        points = "N/A"
+
+                    room["point_value"] = points
+
+                    rooms.append(room)
+
+                except Exception as e:
+                    logger.warning(f"Failed to parse room card: {e}")
+                    continue
+
+        except Exception as e:
+            logger.error(f"Parsing failed: {e}")
+
+        self.sb.set_content("")
+        return rooms
+
+    def _parse_room_cards_new_html(self, html_content: str) -> list:
+        """Parse Marriott room cards from provided HTML."""
+        if not self.sb:
+            logger.error("SeleniumBase instance missing")
+            return []
+
+        logger.info("Parsing room HTML content...")
+        rooms = []
+
+        try:
+            self.sb.set_content(html_content)
+            # self.sb.sleep(0.9)
+
+            selector = "div.rate-card-container"
+            room_cards = self.sb.find_elements(selector)
+            logger.info(f"Found {len(room_cards)} room cards.")
+
+            for card in room_cards:
+                try:
+                    logger.info(f"Parsing card '{card.text}'...")
+                    room = {}
+
+                    # Room Name
+                    room["title"] = card.find_element(By.CSS_SELECTOR, ".room-desc .room-name").text.strip()
+
+                    # Room Details Link -> extract roomPoolCode
+                    try:
+                        details_link = card.find_element(By.CSS_SELECTOR, ".room-desc a").get_attribute("href")
+                        room_code = details_link.split("roomPoolCode=")[1].split("&")[0]
+                        room["room_type_code"] = room_code
+                    except Exception:
+                        room["room_type_code"] = "N/A"
+
+                    # Description (Marriott rarely shows description, may be blank)
+                    try:
+                        desc_el = card.find_element(
+                            By.CSS_SELECTOR, ".rate-description"
+                        )
+                        room["description"] = desc_el.text.strip()
+                    except:
+                        room["description"] = "No description"
+
+                    # Primary image
+                    try:
+                        img = card.find_element(By.CSS_SELECTOR, ".image-container picture img").get_attribute("src")
+                        room["image_url"] = img
+                    except:
+                        room["image_url"] = "No Image Found"
+
+                    # Points rate
+                    try:
+                        points = card.find_element(By.CSS_SELECTOR, ".rate-content .room-rate").text.strip()
                     except:
                         points = "N/A"
 
@@ -336,47 +406,50 @@ class ExtractMarriott:
     def _navigate_and_search(self):
         """Handles browser navigation, element interaction, and search execution."""
 
-        # 1. Navigate and setup
         url = BASE_URL
         logger.info(f"Navigating to base URL: {url}")
         try:
             # self.sb.open(url)
             self.sb.activate_cdp_mode(url)
-            self.sb.sleep(3.5)
+            self.sb.sleep(random.uniform(2.1, 3.6))
         except WebDriverException as e:
             logger.critical(f"Failed to navigate or activate CDP mode. Error: {e}")
             return False
 
         try:
-            self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=90)
-        except Exception as e:
-            logger.error(f"Timed out waiting for home page to render. Error: {e}")
-            return False
+            self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+        except Exception as first_error:
+            logger.info(f"Reloading homepage")
+            self.sb.reload_page()
 
-        # 2. Set Location
+            try:
+                self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+            except Exception as e:
+                logger.error(f"Timed out waiting for home page to render. Error: {e}")
+                return False
+
         if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
             return False
-        self.sb.sleep(1)
+        self.sb.sleep(random.uniform(0.1, 1.0))
 
         if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"):
             return False
 
-        self.sb.sleep(3)
+        self.sb.sleep(random.uniform(1.5, 2.9))
         self.sb.wait_for_element_visible('[role="option"]', timeout=15)
         self.sb.click('[role="option"]')
         logger.info("Successfully clicked suggestion")
-        self.sb.sleep(1)
+        self.sb.sleep(random.uniform(0.4, 1.2))
 
-        # ---- OPEN CALENDAR ----
         logger.info("Opening calendar...")
 
-        self.sb.click("//body")
-        self.sb.sleep(0.3)
+        # self.sb.click("//body")
+        self.sb.sleep(random.uniform(0.1, 0.9))
 
         date_input = self.sb.find_element("//input[@aria-label='date-picker']")
         date_input.click()
         logger.info("Successfully open calendar")
-        self.sb.sleep(0.5)
+        self.sb.sleep(random.uniform(0.1, 0.5))
 
         def go_to_month(target_month_year: str):
             """
@@ -386,13 +459,12 @@ class ExtractMarriott:
             target = target_month_year.strip().lower()
             logger.info(f"Go to month: {target_month_year}")
 
-            # Limit search to prevent infinite loop
             for _ in range(18):
                 caps = self.sb.find_elements("//div[@class='DayPicker-Caption']/div")
                 caps = [c for c in caps if c.text.strip()]
 
                 if not caps:
-                    self.sb.sleep(0.3)
+                    self.sb.sleep(random.uniform(0.1, 0.3))
                     continue
 
                 visible = [c.text.strip().lower() for c in caps]
@@ -400,20 +472,17 @@ class ExtractMarriott:
 
                 logger.info(f"Visible month caption: {visible}")
 
-                # 2. Check if the target month is the first visible month
                 if first == target:
                     logger.info(f"First visible month matched target: {first}")
-                    # Wait for the day grid to be fully rendered
                     self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
                     return
 
-                # 3. Click the next button and wait for the render
                 next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
                 next_button.click()
 
-                self.sb.sleep(0.3)
+                self.sb.sleep(random.uniform(0.1, 0.4))
                 self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
-                self.sb.sleep(0.3)
+                self.sb.sleep(random.uniform(0.1, 0.3))
 
             raise Exception(f"Could not reach month: {target_month_year}")
 
@@ -423,39 +492,36 @@ class ExtractMarriott:
 
             target_month_year = check_in_month_year
 
-            # --- STEP 1: Navigate to the correct month ---
             go_to_month(target_month_year)
-            self.sb.sleep(9)
+            self.sb.sleep(random.uniform(2.1, 8.3))
 
             # html = self.sb.get_page_source()
             # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
             #     f.write(html)
 
-            # --- STEP 2: Select Dates via JavaScript ---
             logger.info(f"Selecting dates: {check_in_date_label} to {check_out_date_label}")
 
-            # --- STEP 2: Select Dates using direct Selenium Click ---
             CHECK_IN_XPATH = f'//div[@aria-label="{check_in_date_label}"]'
             CHECK_OUT_XPATH = f'//div[@aria-label="{check_out_date_label}"]'
 
             try:
                 check_in_element = self.sb.find_element(CHECK_IN_XPATH)
-                self.sb.sleep(0.5)
+                self.sb.sleep(random.uniform(0.1, 0.5))
                 check_in_element.click()
                 logger.info(f"Clicked Check-in date: {check_in_date_label}")
-                self.sb.sleep(1)
+                self.sb.sleep(random.uniform(0.1, 0.7))
 
                 check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
-                self.sb.sleep(0.8)
+                self.sb.sleep(random.uniform(0.1, 0.8))
                 check_out_element.click()
                 logger.info(f"Clicked Check-out date: {check_out_date_label}")
-                self.sb.sleep(0.9)
+                self.sb.sleep(random.uniform(0.1, 0.9))
 
 
                 done_button_xpath = "//button[@aria-label='Done']"
                 self.sb.click(done_button_xpath)
                 logger.info("Successfully clicked the 'Done' button.")
-                self.sb.sleep(1)
+                self.sb.sleep(random.uniform(0.1, 0.9))
             except Exception as e:
                 logger.warning(f"Could not click the 'Done' button: {e}")
 
@@ -477,10 +543,8 @@ class ExtractMarriott:
                 The date string in the new specified format.
             """
             try:
-                # Parse the original string into a datetime object
                 date_object = datetime.strptime(date_string, input_format)
 
-                # Format the datetime object into the desired output string
                 new_date_str = date_object.strftime(output_format)
 
                 return new_date_str
@@ -504,12 +568,10 @@ class ExtractMarriott:
 
         logger.info("Date selection complete.")
 
-        # Select 'Use Points'
         if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
             return False
-        self.sb.sleep(3)
+        self.sb.sleep(random.uniform(2.1, 3.3))
 
-        # Click 'Find Hotels'
         if not self._safe_click("button.update-search-btn", "find hotel button"):
             return False
 
@@ -520,25 +582,42 @@ class ExtractMarriott:
         PROPERTY_CARD_SELECTOR = 'div.property-card[data-marsha]'
 
         try:
-            self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=90)
-        except Exception as e:
-            logger.error(f"Timed out waiting for list page to render. Error: {e}")
-            return False
+            self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
+        except Exception as first_error:
+            logger.info(f"Reloading listPage")
+            self.sb.reload_page()
 
-        self.marsha_code = self.sb.get_attribute(PROPERTY_CARD_SELECTOR, 'data-marsha')
+            try:
+                self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
+            except Exception as e:
+                logger.error(f"Timed out waiting for list page to render. Error: {e}")
+                return False
 
-        logger.info(f"First listed hotel is: {self.marsha_code}")
+        cards = self.sb.find_elements(PROPERTY_CARD_SELECTOR)
 
-        if self.hotel_id.lower() != self.marsha_code.lower():
-            logger.info(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+        matched_card = None
+        available_codes = []
+
+        for card in cards:
+            code = card.get_attribute("data-marsha")
+            if code:
+                code_lower = code.lower()
+                available_codes.append(code_lower)
+
+                if code_lower == self.hotel_id.lower():
+                    matched_card = card
+
+        self.marsha_code = available_codes
+
+        if not matched_card:
+            logger.info(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
             message = {
-                "details": f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}",
+                "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
             }
-            return self.build_response(success=False, data=message, status_code=102)
-
+            return self.build_response(success=False, data=message, status_code=422)
         else:
-            logger.info(f"Input hotel {self.hotel_id.lower()} matched with first listed hotel: {self.marsha_code}")
-            view_rates_xpath = "//a[contains(@class, 'view-rates-button-container')]/button"
+            logger.info(f"Input hotel {self.hotel_id.lower()} available in listed hotel: {self.marsha_code}")
+            view_rates_xpath = f'//div[@data-marsha="{self.hotel_id.upper()}"]//a[contains(@class,"view-rates-button-container")]/button'
             try:
                 self.sb.wait_for_element_visible(view_rates_xpath, timeout=120)
             except Exception as e:
@@ -548,25 +627,60 @@ class ExtractMarriott:
             if not self._safe_click(view_rates_xpath, "view_rates button"):
                 return False
 
-            ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"]'
+            self.sb.sleep(random.uniform(2.5, 4.9))
+
+            ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"], div.rate-card-container'
+
+            self.sb.save_screenshot("room_page.png")
 
             try:
-                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=40)
-            except Exception as e:
-                logger.error(f"Timed out waiting for room rates to render. Error: {e}")
-                return False
-            logger.info("Clicked 'View Rates' successfully!")
+                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
+            except Exception as first_error:
+                logger.info(f"Reloading roomPage")
+                self.sb.reload_page()
 
-            self.sb.scroll_to_bottom()
-            self.sb.sleep(3)
+                try:
+                    self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
+                except Exception as e:
+                    logger.error(f"Timed out waiting for room rates to render. Error: {e}")
+                    return False
+
+            logger.info("Clicked 'View Rates' successfully!")
+            self.sb.sleep(random.uniform(2.1, 3.3))
+
+            def slow_scroll(sb, step=600, pause=0.3, max_attempts=900):
+                """
+                Improved scroll that goes near the true bottom before stopping.
+                It waits for multiple scroll height checks to confirm no new content
+                is loading before stopping.
+                """
+
+                unchanged_height_count = 0
+                last_height = sb.execute_script("return document.body.scrollHeight")
+
+                for _ in range(max_attempts):
+                    sb.execute_script(f"window.scrollBy(0, {step});")
+                    time.sleep(pause)
+
+                    new_height = sb.execute_script("return document.body.scrollHeight")
+
+                    if new_height == last_height:
+                        unchanged_height_count += 1
+                    else:
+                        unchanged_height_count = 0  # reset because page grew
+
+                    if unchanged_height_count >= 5:
+                        break
+
+                    last_height = new_height
+
+            slow_scroll(self.sb)
 
             logger.info("Slow scroll finished. Element is now in view.")
-            self.sb.sleep(5)
             # html = self.sb.get_page_source()
             # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
             #     f.write(html)
 
-            self.sb.save_screenshot("room_page.png")
             return True
 
     def _extract_html_and_parse(self):
@@ -575,11 +689,21 @@ class ExtractMarriott:
         try:
             logger.info("Scrolling entire page to load room cards...")
 
-            # Extract page HTML after scrolling
             html = self.sb.get_attribute("body", "outerHTML")
             logger.info(f"Extracted HTML length: {len(html)}")
+            page_version = None
+            if 'rate-card-container' in html:
+                page_version = "new"
+            elif 'RateCardV2' in html:
+                page_version = "old"
+            else:
+                logger.error("No valid room layout detected!")
 
-            self.structured_room_data = self._parse_room_cards_html(html)
+            if page_version == "new":
+                self.structured_room_data = self._parse_room_cards_new_html(html)
+
+            if page_version == "old":
+                self.structured_room_data = self._parse_room_cards_html(html)
 
             logger.info(f"Parsed {len(self.structured_room_data)} rooms.")
 
@@ -605,17 +729,15 @@ class ExtractMarriott:
             url = "http://" + url  # add temporary scheme for parsing
 
         parsed = urlparse(url)
-        if "smart" in parsed.hostname:
+        if "smartproxy" in parsed.hostname:
             host = "smt"
-        elif "private" in parsed.hostname:
-            host = "pvt"
         elif "oxylabs" in parsed.hostname:
             host = "aux"
         else:
-            host = None
+            host = "pvt"
         logger.info(f"Using Proxy: {host}:{parsed.port}")
-        self.user_agent_pool = Linux_USER_AGENT_POOL
-        # self.user_agent_pool = Widnows_USER_AGENT_POOL
+        # self.user_agent_pool = Linux_USER_AGENT_POOL
+        self.user_agent_pool = Widnows_USER_AGENT_POOL
         self.selected_user_agent = random.choice(self.user_agent_pool)
         logger.info(f"Using User-Agent: {self.selected_user_agent}")
         message = {
@@ -635,7 +757,7 @@ class ExtractMarriott:
                 ad_block=True,
                 disable_csp=False,
                 chromium_arg=[
-                    "--headless=new"    ### make uncomment for docker
+                    # "--headless=new"    ### make uncomment for docker
                     "--disable-infobars",
                     "--no_sandbox",
                     "--disable_gpu",
@@ -645,14 +767,14 @@ class ExtractMarriott:
                 ],
                 timeout_multiplier=2.0,
                 # slow=True,
-                headless=True,
+                headless=False,
                 # browser="chrome",
                 # page_load_strategy="eager"
             ) as sb:
 
                 sb.set_window_size(1280 + random.randint(-100, 100),
                                    720 + random.randint(-50, 50))
-                sb.sleep(0.2)
+                sb.sleep(random.uniform(0.1, 0.2))
                 self.sb = sb
 
                 # Navigate and Search
@@ -666,15 +788,15 @@ class ExtractMarriott:
                     return self.build_response(success=False, data=message, status_code=408)
 
                 if isinstance(navigation, dict) and not navigation.get("success", True):
-                    logger.error(f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}")
+                    logger.error(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
                     message = {
-                        "details": f"Input hotel {self.hotel_id.lower()} not matched with first listed hotel: {self.marsha_code}",
+                        "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
                     }
-                    return self.build_response(success=False, data=message, status_code=102)
+                    return self.build_response(success=False, data=message, status_code=422)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
-                self.sb.sleep(3)
+                self.sb.sleep(random.uniform(0.5, 2.3))
 
         except Exception as e:
             logger.critical(f"A fatal error occurred during the scraping process: {e}")
@@ -697,6 +819,6 @@ class ExtractMarriott:
 if __name__ == '__main__':
     scraper = ExtractMarriott()
 
-    data = scraper.get_search_data(hotel_id="oxrtc-courtyard-thousand-oaks-agoura-hills", check_in_date="2025-12-19",
-                                   check_out_date="2025-12-20" , guest_count=1)
+    data = scraper.get_search_data(hotel_id="laxbp-courtyard-los-angeles-baldwin-park", check_in_date="2026-01-26",
+                                   check_out_date="2026-01-28" , guest_count=1)
     print(json.dumps(data, indent=4))
