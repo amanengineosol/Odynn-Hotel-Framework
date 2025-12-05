@@ -8,6 +8,12 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 API_KEY_NAME = "X-API-Key"  # Standard API key header
 
+if API_KEY is None:
+    raise Exception(
+        status_code=401,
+        detail="API_KEY environment variable is not set",
+
+    )
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 async def api_key_authentication(api_key_header: str = Security(api_key_header)):
