@@ -92,7 +92,7 @@ Linux_USER_AGENT_POOL = [
     # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/542.15 (KHTML, like Gecko) Brave/138.0.165.170 Safari/542.15",
     # ####NW "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/540.02 (KHTML, like Gecko) Brave/138.0.1257.319 Safari/540.02",
     # ####NW "Mozilla/5.0 (X11; Ubuntu; Linux i686) AppleWebKit/542.47 (KHTML, like Gecko) Brave/140.0.1420.39 Safari/542.47",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
 ]
 Widnows_USER_AGENT_POOL = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
@@ -425,7 +425,7 @@ class ExtractMarriott:
             try:
                 self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
             except Exception as e:
-                logger.error(f"Timed out waiting for home page to render. Error: {e}")
+                logger.error(f"Timed out waiting for home page to render after reload. Error: {e}")
                 return False
 
         if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
@@ -590,7 +590,7 @@ class ExtractMarriott:
             try:
                 self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
             except Exception as e:
-                logger.error(f"Timed out waiting for list page to render. Error: {e}")
+                logger.error(f"Timed out waiting for list page to render after reload. Error: {e}")
                 return False
 
         cards = self.sb.find_elements(PROPERTY_CARD_SELECTOR)
@@ -642,7 +642,7 @@ class ExtractMarriott:
                 try:
                     self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
                 except Exception as e:
-                    logger.error(f"Timed out waiting for room rates to render. Error: {e}")
+                    logger.error(f"Timed out waiting for room rates to render after reload. Error: {e}")
                     return False
 
             logger.info("Clicked 'View Rates' successfully!")
@@ -763,11 +763,14 @@ class ExtractMarriott:
                     "--disable_gpu",
                     "--disable-dev-shm-usage",
                     "--window-size=1280,800",
-                    "--start-maximized"
+                    "--start-maximized",
+                    "--uc-cdp-events=false"
                 ],
                 timeout_multiplier=2.0,
                 # slow=True,
                 headless=True,
+                # disable_cdp_logs=True,
+                log_cdp=False,
                 # browser="chrome",
                 # page_load_strategy="eager"
             ) as sb:
