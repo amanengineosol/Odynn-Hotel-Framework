@@ -15,22 +15,22 @@ try:
 except ValueError:
     PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
 
-import mycdp.util
+# import mycdp.util
 
-_event_parsers = mycdp.util._event_parsers
+# _event_parsers = mycdp.util._event_parsers
 
-def patched_parse_event(data):
-    method = data.get("method")
-    params = data.get("params", {})
-    parser = _event_parsers.get(method)
-
-    if parser is None:
-        # ignore unknown CDP events
-        return None
-
-    return parser.from_json(params)
-
-mycdp.util.parse_json_event = patched_parse_event
+# def patched_parse_event(data):
+#     method = data.get("method")
+#     params = data.get("params", {})
+#     parser = _event_parsers.get(method)
+#
+#     if parser is None:
+#         # ignore unknown CDP events
+#         return None
+#
+#     return parser.from_json(params)
+#
+# mycdp.util.parse_json_event = patched_parse_event
 
 # --- SETUP LOGGING ---
 # Configure the logger for the module
@@ -430,7 +430,7 @@ class ExtractMarriott:
 
         if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
             return False
-        self.sb.sleep(random.uniform(0.1, 1.0))
+        self.sb.sleep(random.uniform(0.8, 1.7))
 
         if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"):
             return False
@@ -439,17 +439,17 @@ class ExtractMarriott:
         self.sb.wait_for_element_visible('[role="option"]', timeout=15)
         self.sb.click('[role="option"]')
         logger.info("Successfully clicked suggestion")
-        self.sb.sleep(random.uniform(0.4, 1.2))
+        self.sb.sleep(random.uniform(0.6, 1.2))
 
         logger.info("Opening calendar...")
 
         # self.sb.click("//body")
-        self.sb.sleep(random.uniform(0.1, 0.9))
+        self.sb.sleep(random.uniform(0.5, 1.5))
 
         date_input = self.sb.find_element("//input[@aria-label='date-picker']")
         date_input.click()
         logger.info("Successfully open calendar")
-        self.sb.sleep(random.uniform(0.1, 0.5))
+        self.sb.sleep(random.uniform(0.8, 1.4))
 
         def go_to_month(target_month_year: str):
             """
@@ -464,7 +464,7 @@ class ExtractMarriott:
                 caps = [c for c in caps if c.text.strip()]
 
                 if not caps:
-                    self.sb.sleep(random.uniform(0.1, 0.3))
+                    self.sb.sleep(random.uniform(0.4, 0.8))
                     continue
 
                 visible = [c.text.strip().lower() for c in caps]
@@ -480,9 +480,9 @@ class ExtractMarriott:
                 next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
                 next_button.click()
 
-                self.sb.sleep(random.uniform(0.1, 0.4))
+                self.sb.sleep(random.uniform(0.5, 0.8))
                 self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
-                self.sb.sleep(random.uniform(0.1, 0.3))
+                self.sb.sleep(random.uniform(0.3, 0.6))
 
             raise Exception(f"Could not reach month: {target_month_year}")
 
@@ -506,22 +506,22 @@ class ExtractMarriott:
 
             try:
                 check_in_element = self.sb.find_element(CHECK_IN_XPATH)
-                self.sb.sleep(random.uniform(0.1, 0.5))
+                self.sb.sleep(random.uniform(0.4, 0.7))
                 check_in_element.click()
                 logger.info(f"Clicked Check-in date: {check_in_date_label}")
-                self.sb.sleep(random.uniform(0.1, 0.7))
+                self.sb.sleep(random.uniform(0.5, 0.8))
 
                 check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
-                self.sb.sleep(random.uniform(0.1, 0.8))
+                self.sb.sleep(random.uniform(0.4, 0.8))
                 check_out_element.click()
                 logger.info(f"Clicked Check-out date: {check_out_date_label}")
-                self.sb.sleep(random.uniform(0.1, 0.9))
+                self.sb.sleep(random.uniform(0.4, 0.9))
 
 
                 done_button_xpath = "//button[@aria-label='Done']"
                 self.sb.click(done_button_xpath)
                 logger.info("Successfully clicked the 'Done' button.")
-                self.sb.sleep(random.uniform(0.1, 0.9))
+                self.sb.sleep(random.uniform(1, 1.5))
             except Exception as e:
                 logger.warning(f"Could not click the 'Done' button: {e}")
 
@@ -567,6 +567,8 @@ class ExtractMarriott:
         )
 
         logger.info("Date selection complete.")
+
+        self.sb.sleep(random.uniform(0.5, 1.4))
 
         if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
             return False
