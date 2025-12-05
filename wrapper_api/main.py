@@ -9,7 +9,7 @@ import logging.config
 
 from ip_whitelist import ip_whitelist
 from log import LOGGING
-
+from auth import api_key_authentication
 from celery_config import celery_app
 from task import process_live_request
 from cache_processor import CrawlerRedisClient
@@ -91,7 +91,7 @@ class ExceptionMiddleware(BaseHTTPMiddleware):
 app.add_middleware(ExceptionMiddleware)
 
 
-@app.post("/sendRequest/", dependencies=[Depends(ip_whitelist), Depends(limiter)])
+@app.post("/sendRequest/", dependencies=[Depends(api_key_authentication), Depends(limiter)])
 async def hotel_wrapper(request_body: HotelRequest):
     try:
         original_hotel_id = str(request_body.parameter.get("hotel_id")).lower()
