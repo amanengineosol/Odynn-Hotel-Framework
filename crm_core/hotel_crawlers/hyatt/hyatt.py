@@ -7,31 +7,12 @@ import sbase.steps
 from seleniumbase import SB
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
-
-# from mycdp.network import PrivateNetworkRequestPolicy
-#
-# # Gracefully handle new Chrome value
-# try:
-#     PrivateNetworkRequestPolicy("PermissionBlock")
-# except ValueError:
-#     PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
-#
-# import mycdp.util
-#
-# _event_parsers = mycdp.util._event_parsers
-#
-# def patched_parse_event(data):
-#     method = data.get("method")
-#     params = data.get("params", {})
-#     parser = _event_parsers.get(method)
-#
-#     if parser is None:
-#         # ignore unknown CDP events
-#         return None
-#
-#     return parser.from_json(params)
-#
-# mycdp.util.parse_json_event = patched_parse_event
+from mycdp.network import PrivateNetworkRequestPolicy
+# Gracefully handle new Chrome value
+try:
+    PrivateNetworkRequestPolicy("PermissionBlock")
+except ValueError:
+    PrivateNetworkRequestPolicy._value2member_map_["PermissionBlock"] = list(PrivateNetworkRequestPolicy)[0]
 
 # --- SETUP LOGGING ---
 # Configure the logger for the module
@@ -53,13 +34,13 @@ if not logger.handlers:
 # --- CONFIGURATION (Global Constants) ---
 
 USER_AGENT_POOL = [
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
     # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    # "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
-    # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
-    # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; WOW64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7204.169 Safari/537.36 OPR/142.0.7204.169",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0",
@@ -115,7 +96,6 @@ class HyattScraper:
     def _get_proxy(self):
         """Fetches the proxy URL from the ProxyManager utility."""
         try:
-            # Assuming ProxyManager is available and working
             from .proxy_manager import ProxyManager
             return ProxyManager().fetch_proxy()
 
@@ -225,19 +205,7 @@ class HyattScraper:
             logger.error(f"Typing error on {description} ({selector}). Error: {e}")
             return False
 
-    # def _safe_type(self, selector: str, text: str, description: str, sleep_time: float = 1.0):
-    #     """Wrapper for sb.type with robust exception handling for timeouts."""
-    #     try:
-    #         self.sb.type(selector, text)
-    #         logger.debug(f"Successfully typed '{text}' into: {description} ({selector})")
-    #         self.sb.sleep(sleep_time)
-    #         return True
-    #     except TimeoutException:
-    #         logger.error(f"Timeout typing into element: {description} ({selector}).")
-    #         return False
-    #     except Exception as e:
-    #         logger.error(f"General error typing into element: {description} ({selector}). Error: {e}")
-    #         return False
+
 
     def test_dump_curl(self):
         self.sb.enable_network_logging()
@@ -262,18 +230,6 @@ class HyattScraper:
         logger.info(f"Navigating to base URL: {url}")
         try:
             self.sb.activate_cdp_mode(url)
-            logs = self.sb.get_cdp_logs()
-            logger.info(f"Logs: {logs}")
-            with open ("/tmp/log.log",'w') as f:
-                f.write(logs)
-            # self.test_dump_curl()
-            # if request.response:
-            #     try:
-            #         curl_cmd = request.curl_command
-            #         print("\n===== cURL REQUEST =====")
-            #         print(curl_cmd)
-            #     except Exception:
-            #         pass
             self.sb.sleep(3.5)
         except WebDriverException as e:
             logger.critical(f"Failed to navigate or activate CDP mode. Check network/proxy. Error: {e}")
@@ -283,9 +239,9 @@ class HyattScraper:
         # self.sb.save_screenshot("initial_page_load.png")
         self.sb.save_screenshot("hyatt_home_page.png")
 
-        html = self.sb.get_page_source()
-        with open("hyatt_home_page.html", "w", encoding="utf-8") as f:
-            f.write(html)
+        # html = self.sb.get_page_source()
+        # with open("hyatt_home_page.html", "w", encoding="utf-8") as f:
+        #     f.write(html)
         self.sb.click_if_visible('button[aria-label="Close"]', timeout=3)
         self.sb.click_if_visible("#onetrust-reject-all-handler", timeout=3)
         self.sb.sleep(1)
@@ -399,49 +355,23 @@ class HyattScraper:
                 locale="en",
                 do_not_track=True,
                 incognito=True,
-
-                # proxy
-                # proxy=self.proxy_url,
-                # proxy_bypass_list="*",
-
-                # fingerprint / stealth
+                proxy=self.proxy_url,
                 agent=self.selected_user_agent,
                 ad_block=True,
                 disable_csp=True,
-
-                # # browser stability
-                # no_sandbox=True,
-                # disable_gpu=True,
-                # disable_web_security=True,
-
-                # extra chrome args
                 chromium_arg=[
                     "--headless=new",
                     "--disable-infobars",
                     "--no_sandbox",
                     "--disable_gpu",
-                    # "--disable_web_security",
+                    "--disable_web_security",
                     "--disable-features=IsolateOrigins,site-per-process",
                     "--disable-dev-shm-usage",
                     "--disable-blink-features=AutomationControlled",
                     # "--window-size=1280,800",
                 ],
-
-                # chromium_arg=[
-                #     # "--headless=new"    ### make uncomment for docker
-                #     "--disable-infobars",
-                #     "--no_sandbox",
-                #     "--disable_gpu",
-                #     "--disable-dev-shm-usage",
-                #     "--window-size=1280,800",
-                #     "--start-maximized"
-                # ],
-
-                # timing
                 timeout_multiplier=2.0,
                 slow=False,
-                # verify_delay=0.5,
-
                 headless=True,
             ) as sb:
 
@@ -452,7 +382,7 @@ class HyattScraper:
 
                 # Navigate and Search
                 if not self._navigate_and_search():
-                    logger.info(f"Using {self.proxy_url} to navigate")
+                    # logger.info(f"Using {self.proxy_url} to navigate")
                     logger.error("Navigation or Search phase failed due to locator timeout.")
                     final_response = self.build_response(success=False, data=[], status_code=408, error_message="Navigation or Search failed due to locator timeout or missing element.")
                     return final_response

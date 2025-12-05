@@ -736,8 +736,8 @@ class ExtractMarriott:
         else:
             host = "pvt"
         logger.info(f"Using Proxy: {host}:{parsed.port}")
-        # self.user_agent_pool = Linux_USER_AGENT_POOL
-        self.user_agent_pool = Widnows_USER_AGENT_POOL
+        self.user_agent_pool = Linux_USER_AGENT_POOL
+        # self.user_agent_pool = Widnows_USER_AGENT_POOL
         self.selected_user_agent = random.choice(self.user_agent_pool)
         logger.info(f"Using User-Agent: {self.selected_user_agent}")
         message = {
@@ -757,7 +757,7 @@ class ExtractMarriott:
                 ad_block=True,
                 disable_csp=False,
                 chromium_arg=[
-                    # "--headless=new"    ### make uncomment for docker
+                    "--headless=new"    ### make uncomment for docker
                     "--disable-infobars",
                     "--no_sandbox",
                     "--disable_gpu",
@@ -767,7 +767,7 @@ class ExtractMarriott:
                 ],
                 timeout_multiplier=2.0,
                 # slow=True,
-                headless=False,
+                headless=True,
                 # browser="chrome",
                 # page_load_strategy="eager"
             ) as sb:
