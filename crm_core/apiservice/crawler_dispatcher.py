@@ -1,7 +1,6 @@
 from hotel_crawlers.hyatt.hyatt import HyattScraper
 from hotel_crawlers.marriott.marriott_s import ExtractMarriott
 USER_AGENT_POOL = [
-    # ... (Original list content) ...
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.95 Safari/537.36 Edg/141.0.3537.57",
 ]
 
