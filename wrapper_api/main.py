@@ -133,7 +133,7 @@ async def hotel_wrapper(request_body: HotelRequest):
         task_result = send_live_request_to_queue(celery_payload, domain_name)
 
         # STEP 4: Poll Redis for the response
-        max_wait = 300
+        max_wait = 420
         interval = 2
         waited = 0
 
