@@ -439,17 +439,17 @@ class ExtractMarriott:
         self.sb.wait_for_element_visible('[role="option"]', timeout=15)
         self.sb.click('[role="option"]')
         logger.info("Successfully clicked suggestion")
-        self.sb.sleep(random.uniform(0.6, 1.2))
+        self.sb.sleep(random.uniform(0.8, 1.2))
 
         logger.info("Opening calendar...")
 
         # self.sb.click("//body")
-        self.sb.sleep(random.uniform(0.5, 1.5))
+        self.sb.sleep(random.uniform(0.9, 1.5))
 
         date_input = self.sb.find_element("//input[@aria-label='date-picker']")
         date_input.click()
         logger.info("Successfully open calendar")
-        self.sb.sleep(random.uniform(0.8, 1.4))
+        self.sb.sleep(random.uniform(0.9, 1.4))
 
         def go_to_month(target_month_year: str):
             """
@@ -464,7 +464,7 @@ class ExtractMarriott:
                 caps = [c for c in caps if c.text.strip()]
 
                 if not caps:
-                    self.sb.sleep(random.uniform(0.4, 0.8))
+                    self.sb.sleep(random.uniform(0.7, 0.9))
                     continue
 
                 visible = [c.text.strip().lower() for c in caps]
@@ -474,10 +474,12 @@ class ExtractMarriott:
 
                 if first == target:
                     logger.info(f"First visible month matched target: {first}")
+                    self.sb.sleep(random.uniform(0.5, 0.8))
                     self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
                     return
 
                 next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
+                self.sb.sleep(random.uniform(0.6, 0.9))
                 next_button.click()
 
                 self.sb.sleep(random.uniform(0.5, 0.8))
@@ -493,7 +495,7 @@ class ExtractMarriott:
             target_month_year = check_in_month_year
 
             go_to_month(target_month_year)
-            self.sb.sleep(random.uniform(2.1, 8.3))
+            self.sb.sleep(random.uniform(3.5, 4.6))
 
             # html = self.sb.get_page_source()
             # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
@@ -506,22 +508,22 @@ class ExtractMarriott:
 
             try:
                 check_in_element = self.sb.find_element(CHECK_IN_XPATH)
-                self.sb.sleep(random.uniform(0.4, 0.7))
+                self.sb.sleep(random.uniform(0.7, 0.9))
                 check_in_element.click()
                 logger.info(f"Clicked Check-in date: {check_in_date_label}")
-                self.sb.sleep(random.uniform(0.5, 0.8))
+                self.sb.sleep(random.uniform(0.6, 0.8))
 
                 check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
-                self.sb.sleep(random.uniform(0.4, 0.8))
+                self.sb.sleep(random.uniform(0.9, 1.3))
                 check_out_element.click()
                 logger.info(f"Clicked Check-out date: {check_out_date_label}")
-                self.sb.sleep(random.uniform(0.4, 0.9))
+                self.sb.sleep(random.uniform(0.9, 1.4))
 
 
                 done_button_xpath = "//button[@aria-label='Done']"
                 self.sb.click(done_button_xpath)
                 logger.info("Successfully clicked the 'Done' button.")
-                self.sb.sleep(random.uniform(1, 1.5))
+                self.sb.sleep(random.uniform(1.2, 1.7))
             except Exception as e:
                 logger.warning(f"Could not click the 'Done' button: {e}")
 
@@ -568,7 +570,7 @@ class ExtractMarriott:
 
         logger.info("Date selection complete.")
 
-        self.sb.sleep(random.uniform(0.5, 1.4))
+        self.sb.sleep(random.uniform(0.9, 1.4))
 
         if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
             return False
