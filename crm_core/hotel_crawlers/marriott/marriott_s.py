@@ -825,7 +825,7 @@ class ExtractMarriott:
                     message = {
                         "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
                     }
-                    return self.build_response(success=False, data=message, status_code=422)
+                    return self.build_response(success=True, data=message, status_code=200)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
@@ -846,7 +846,7 @@ class ExtractMarriott:
             message = {
                 "details": "Search successful, but no room data found for the criteria.",
             }
-            return self.build_response(success=False, data=message, status_code=204)
+            return self.build_response(success=True, data=message, status_code=200)
 
 
 if __name__ == '__main__':
