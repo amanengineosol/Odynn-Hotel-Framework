@@ -32,6 +32,32 @@ except ValueError:
 #
 # mycdp.util.parse_json_event = patched_parse_event
 
+import mycdp.util
+
+loggger = logging.getLogger("cdp")
+
+_event_parsers = mycdp.util._event_parsers
+
+def patched_parse_event(data):
+    method = data.get("method")
+    params = data.get("params", {})
+
+    parser = _event_parsers.get(method)
+
+    if parser is None:
+        loggger.debug(f"[CDP] Unknown event ignored: {method}")
+        return None
+
+    try:
+        return parser.from_json(params)
+    except Exception as e:
+        loggger.error(f"[CDP] Failed to parse event {method}: {e}")
+        return None
+
+# monkey-patch
+mycdp.util.parse_json_event = patched_parse_event
+
+
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('MarriottScraper')
