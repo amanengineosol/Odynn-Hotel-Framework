@@ -436,7 +436,8 @@ class ExtractMarriott:
     def _navigate_and_search(self):
         """Handles browser navigation, element interaction, and search execution."""
 
-        url = BASE_URL
+        # url = BASE_URL
+        url = "https://books.toscrape.com/"
         logger.info(f"Navigating to base URL: {url}")
         try:
             # self.sb.open(url)
@@ -448,7 +449,7 @@ class ExtractMarriott:
 
         # only for testing
         try:
-            self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+            # self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
             logger.info("home page loaded successfully")
             return True
         except Exception as e:
