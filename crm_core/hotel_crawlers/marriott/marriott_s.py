@@ -436,7 +436,8 @@ class ExtractMarriott:
     def _navigate_and_search(self):
         """Handles browser navigation, element interaction, and search execution."""
 
-        url = BASE_URL
+        # url = BASE_URL
+        url = "https://books.toscrape.com/"
         logger.info(f"Navigating to base URL: {url}")
         try:
             # self.sb.open(url)
@@ -446,304 +447,313 @@ class ExtractMarriott:
             logger.critical(f"Failed to navigate or activate CDP mode. Error: {e}")
             return False
 
+        # only for testing
         try:
-            self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
-        except Exception as first_error:
-            logger.info(f"Reloading homepage")
-            self.sb.reload_page()
-
-            try:
-                self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
-            except Exception as e:
-                logger.error(f"Timed out waiting for home page to render after reload. Error: {e}")
-                return False
-
-        if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
-            return False
-        self.sb.sleep(random.uniform(0.8, 1.7))
-
-        if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"):
-            return False
-
-        self.sb.sleep(random.uniform(1.5, 2.9))
-        self.sb.wait_for_element_visible('[role="option"]', timeout=15)
-        self.sb.click('[role="option"]')
-        logger.info("Successfully clicked suggestion")
-        self.sb.sleep(random.uniform(0.8, 1.2))
-
-        logger.info("Opening calendar...")
-
-        # self.sb.click("//body")
-        self.sb.sleep(random.uniform(0.9, 1.5))
-
-        date_input = self.sb.find_element("//input[@aria-label='date-picker']")
-        date_input.click()
-        logger.info("Successfully open calendar")
-        self.sb.sleep(random.uniform(0.9, 1.4))
-
-        def go_to_month(target_month_year: str):
-            """
-            Navigates the calendar forward until the target month/year is visible.
-            The target_month_year should be in the format 'month year' (e.g., 'january 2026').
-            """
-            target = target_month_year.strip().lower()
-            logger.info(f"Go to month: {target_month_year}")
-
-            for _ in range(18):
-                caps = self.sb.find_elements("//div[@class='DayPicker-Caption']/div")
-                caps = [c for c in caps if c.text.strip()]
-
-                if not caps:
-                    self.sb.sleep(random.uniform(0.7, 0.9))
-                    continue
-
-                visible = [c.text.strip().lower() for c in caps]
-                first = visible[0]
-
-                logger.info(f"Visible month caption: {visible}")
-
-                if first == target:
-                    logger.info(f"First visible month matched target: {first}")
-                    self.sb.sleep(random.uniform(0.5, 0.8))
-                    self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
-                    return
-
-                next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
-                self.sb.sleep(random.uniform(0.6, 0.9))
-                next_button.click()
-
-                self.sb.sleep(random.uniform(0.5, 0.8))
-                self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
-                self.sb.sleep(random.uniform(0.3, 0.6))
-
-            raise Exception(f"Could not reach month: {target_month_year}")
-
-
-        def select_check_in_check_out(check_in_date_label: str, check_out_date_label: str, check_in_month_year,
-            check_out_month_year):
-
-            target_month_year = check_in_month_year
-
-            go_to_month(target_month_year)
-            self.sb.sleep(random.uniform(3.5, 4.6))
-
-            # html = self.sb.get_page_source()
-            # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
-            #     f.write(html)
-
-            logger.info(f"Selecting dates: {check_in_date_label} to {check_out_date_label}")
-
-            CHECK_IN_XPATH = f'//div[@aria-label="{check_in_date_label}"]'
-            CHECK_OUT_XPATH = f'//div[@aria-label="{check_out_date_label}"]'
-
-            try:
-                check_in_element = self.sb.find_element(CHECK_IN_XPATH)
-                self.sb.sleep(random.uniform(0.7, 0.9))
-                check_in_element.click()
-                logger.info(f"Clicked Check-in date: {check_in_date_label}")
-                self.sb.sleep(random.uniform(0.6, 0.8))
-
-                check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
-                self.sb.sleep(random.uniform(0.9, 1.3))
-                check_out_element.click()
-                logger.info(f"Clicked Check-out date: {check_out_date_label}")
-                self.sb.sleep(random.uniform(0.9, 1.4))
-
-
-                done_button_xpath = "//button[@aria-label='Done']"
-                self.sb.click(done_button_xpath)
-                logger.info("Successfully clicked the 'Done' button.")
-                self.sb.sleep(random.uniform(1.2, 1.7))
-            except Exception as e:
-                logger.warning(f"Could not click the 'Done' button: {e}")
-
-        def convert_date_format(
-                date_string: str,
-                input_format: str = "%Y-%m-%d",
-                output_format: str = "%a %b %d %Y"
-        ) -> str:
-            """
-            Converts a date string from one format to another.
-
-            Args:
-                date_string: The original date string (e.g., "2026-01-12").
-                input_format: The format of the original date string (e.g., "%Y-%m-%d").
-                output_format: The desired format for the output date string
-                               (e.g., "%a %b %d %Y" for 'Mon Jan 12 2026').
-
-            Returns:
-                The date string in the new specified format.
-            """
-            try:
-                date_object = datetime.strptime(date_string, input_format)
-
-                new_date_str = date_object.strftime(output_format)
-
-                return new_date_str
-
-            except ValueError as e:
-                logger.info(f"Error converting date '{date_string}': {e}")
-                return date_string
-
-        check_in_date_label = convert_date_format(self.check_in_date)
-        check_out_date_label = convert_date_format(self.check_out_date)
-
-        check_in_month_year = convert_date_format(self.check_in_date, output_format="%B %Y")
-        check_out_month_year = convert_date_format(self.check_out_date, output_format="%B %Y")
-
-        select_check_in_check_out(
-            check_in_date_label,
-            check_out_date_label,
-            check_in_month_year,
-            check_out_month_year
-        )
-
-        logger.info("Date selection complete.")
-
-        self.sb.sleep(random.uniform(0.9, 1.4))
-
-        if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
-            return False
-        self.sb.sleep(random.uniform(2.1, 3.3))
-
-        if not self._safe_click("button.update-search-btn", "find hotel button"):
-            return False
-
-        self.sb.sleep(random.uniform(2.9, 4.8))
-
-        self.sb.save_screenshot("list_page.png")
-
-        PROPERTY_CARD_SELECTOR = 'div.property-card[data-marsha]'
-
-        try:
-            self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
-        except Exception as first_error:
-            logger.info(f"Reloading listPage")
-            self.sb.reload_page()
-
-            try:
-                self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
-            except Exception as e:
-                logger.error(f"Timed out waiting for list page to render after reload. Error: {e}")
-                return False
-
-        cards = self.sb.find_elements(PROPERTY_CARD_SELECTOR)
-
-        matched_card = None
-        available_codes = []
-
-        for card in cards:
-            code = card.get_attribute("data-marsha")
-            if code:
-                code_lower = code.lower()
-                available_codes.append(code_lower)
-
-                if code_lower == self.hotel_id.lower():
-                    matched_card = card
-
-        self.marsha_code = available_codes
-
-        if not matched_card:
-            logger.info(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
-            message = {
-                "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
-            }
-            return self.build_response(success=False, data=message, status_code=422)
-        else:
-            logger.info(f"Input hotel {self.hotel_id.lower()} available in listed hotel: {self.marsha_code}")
-            view_rates_xpath = f'//div[@data-marsha="{self.hotel_id.upper()}"]//a[contains(@class,"view-rates-button-container")]/button'
-            try:
-                self.sb.wait_for_element_visible(view_rates_xpath, timeout=120)
-            except Exception as e:
-                logger.error(f"Timed out waiting for view rates. Error: {e}")
-                return False
-
-            if not self._safe_click(view_rates_xpath, "view_rates button"):
-                return False
-
-            self.sb.sleep(random.uniform(2.5, 4.9))
-
-            ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"], div.rate-card-container'
-
-            self.sb.save_screenshot("room_page.png")
-
-            try:
-                self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
-            except Exception as first_error:
-                logger.info(f"Reloading roomPage")
-                self.sb.reload_page()
-
-                try:
-                    self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
-                except Exception as e:
-                    logger.error(f"Timed out waiting for room rates to render after reload. Error: {e}")
-                    return False
-
-            logger.info("Clicked 'View Rates' successfully!")
-            self.sb.sleep(random.uniform(2.1, 3.3))
-
-            def slow_scroll(sb, step=600, pause=0.3, max_attempts=900):
-                """
-                Improved scroll that goes near the true bottom before stopping.
-                It waits for multiple scroll height checks to confirm no new content
-                is loading before stopping.
-                """
-
-                unchanged_height_count = 0
-                last_height = sb.execute_script("return document.body.scrollHeight")
-
-                for _ in range(max_attempts):
-                    sb.execute_script(f"window.scrollBy(0, {step});")
-                    time.sleep(pause)
-
-                    new_height = sb.execute_script("return document.body.scrollHeight")
-
-                    if new_height == last_height:
-                        unchanged_height_count += 1
-                    else:
-                        unchanged_height_count = 0  # reset because page grew
-
-                    if unchanged_height_count >= 5:
-                        break
-
-                    last_height = new_height
-
-            slow_scroll(self.sb)
-
-            logger.info("Slow scroll finished. Element is now in view.")
-            # html = self.sb.get_page_source()
-            # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
-            #     f.write(html)
-
+            # self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+            logger.info("home page loaded successfully")
             return True
-
-    def _extract_html_and_parse(self):
-        """Extracts the entire room list HTML and calls the parser."""
-
-        try:
-            logger.info("Scrolling entire page to load room cards...")
-
-            html = self.sb.get_attribute("body", "outerHTML")
-            logger.info(f"Extracted HTML length: {len(html)}")
-            page_version = None
-            if 'rate-card-container' in html:
-                page_version = "new"
-            elif 'RateCardV2' in html:
-                page_version = "old"
-            else:
-                logger.error("No valid room layout detected!")
-
-            if page_version == "new":
-                self.structured_room_data = self._parse_room_cards_new_html(html)
-
-            if page_version == "old":
-                self.structured_room_data = self._parse_room_cards_html(html)
-
-            logger.info(f"Parsed {len(self.structured_room_data)} rooms.")
-
         except Exception as e:
-            logger.error(f"Critical HTML extraction error: {e}")
-            self.structured_room_data = []
+            logger.error(f"Timed out waiting for home page to render after reload. Error: {e}")
+            return False
+
+        # try:
+        #     self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+        # except Exception as first_error:
+        #     logger.info(f"Reloading homepage")
+        #     self.sb.reload_page()
+        #
+        #     try:
+        #         self.sb.wait_for_element_visible('input[id="downshift-1-input"]', timeout=120)
+        #     except Exception as e:
+        #         logger.error(f"Timed out waiting for home page to render after reload. Error: {e}")
+        #         return False
+        #
+        # if not self._safe_click('input[id="downshift-1-input"]', "Destination Input"):
+        #     return False
+        # self.sb.sleep(random.uniform(0.8, 1.7))
+        #
+        # if not self._safe_type('input[id="downshift-1-input"]', self.location, "Destination Text"):
+        #     return False
+        #
+        # self.sb.sleep(random.uniform(1.5, 2.9))
+        # self.sb.wait_for_element_visible('[role="option"]', timeout=15)
+        # self.sb.click('[role="option"]')
+        # logger.info("Successfully clicked suggestion")
+        # self.sb.sleep(random.uniform(0.8, 1.2))
+        #
+        # logger.info("Opening calendar...")
+        #
+        # # self.sb.click("//body")
+        # self.sb.sleep(random.uniform(0.9, 1.5))
+        #
+        # date_input = self.sb.find_element("//input[@aria-label='date-picker']")
+        # date_input.click()
+        # logger.info("Successfully open calendar")
+        # self.sb.sleep(random.uniform(0.9, 1.4))
+        #
+        # def go_to_month(target_month_year: str):
+        #     """
+        #     Navigates the calendar forward until the target month/year is visible.
+        #     The target_month_year should be in the format 'month year' (e.g., 'january 2026').
+        #     """
+        #     target = target_month_year.strip().lower()
+        #     logger.info(f"Go to month: {target_month_year}")
+        #
+        #     for _ in range(18):
+        #         caps = self.sb.find_elements("//div[@class='DayPicker-Caption']/div")
+        #         caps = [c for c in caps if c.text.strip()]
+        #
+        #         if not caps:
+        #             self.sb.sleep(random.uniform(0.7, 0.9))
+        #             continue
+        #
+        #         visible = [c.text.strip().lower() for c in caps]
+        #         first = visible[0]
+        #
+        #         logger.info(f"Visible month caption: {visible}")
+        #
+        #         if first == target:
+        #             logger.info(f"First visible month matched target: {first}")
+        #             self.sb.sleep(random.uniform(0.5, 0.8))
+        #             self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
+        #             return
+        #
+        #         next_button = self.sb.find_element("//span[contains(@class,'DayPicker-NavButton--next')]")
+        #         self.sb.sleep(random.uniform(0.6, 0.9))
+        #         next_button.click()
+        #
+        #         self.sb.sleep(random.uniform(0.5, 0.8))
+        #         self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
+        #         self.sb.sleep(random.uniform(0.3, 0.6))
+        #
+        #     raise Exception(f"Could not reach month: {target_month_year}")
+        #
+        #
+        # def select_check_in_check_out(check_in_date_label: str, check_out_date_label: str, check_in_month_year,
+        #     check_out_month_year):
+        #
+        #     target_month_year = check_in_month_year
+        #
+        #     go_to_month(target_month_year)
+        #     self.sb.sleep(random.uniform(3.5, 4.6))
+        #
+        #     # html = self.sb.get_page_source()
+        #     # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
+        #     #     f.write(html)
+        #
+        #     logger.info(f"Selecting dates: {check_in_date_label} to {check_out_date_label}")
+        #
+        #     CHECK_IN_XPATH = f'//div[@aria-label="{check_in_date_label}"]'
+        #     CHECK_OUT_XPATH = f'//div[@aria-label="{check_out_date_label}"]'
+        #
+        #     try:
+        #         check_in_element = self.sb.find_element(CHECK_IN_XPATH)
+        #         self.sb.sleep(random.uniform(0.7, 0.9))
+        #         check_in_element.click()
+        #         logger.info(f"Clicked Check-in date: {check_in_date_label}")
+        #         self.sb.sleep(random.uniform(0.6, 0.8))
+        #
+        #         check_out_element = self.sb.find_element(CHECK_OUT_XPATH)
+        #         self.sb.sleep(random.uniform(0.9, 1.3))
+        #         check_out_element.click()
+        #         logger.info(f"Clicked Check-out date: {check_out_date_label}")
+        #         self.sb.sleep(random.uniform(0.9, 1.4))
+        #
+        #
+        #         done_button_xpath = "//button[@aria-label='Done']"
+        #         self.sb.click(done_button_xpath)
+        #         logger.info("Successfully clicked the 'Done' button.")
+        #         self.sb.sleep(random.uniform(1.2, 1.7))
+        #     except Exception as e:
+        #         logger.warning(f"Could not click the 'Done' button: {e}")
+        #
+        # def convert_date_format(
+        #         date_string: str,
+        #         input_format: str = "%Y-%m-%d",
+        #         output_format: str = "%a %b %d %Y"
+        # ) -> str:
+        #     """
+        #     Converts a date string from one format to another.
+        #
+        #     Args:
+        #         date_string: The original date string (e.g., "2026-01-12").
+        #         input_format: The format of the original date string (e.g., "%Y-%m-%d").
+        #         output_format: The desired format for the output date string
+        #                        (e.g., "%a %b %d %Y" for 'Mon Jan 12 2026').
+        #
+        #     Returns:
+        #         The date string in the new specified format.
+        #     """
+        #     try:
+        #         date_object = datetime.strptime(date_string, input_format)
+        #
+        #         new_date_str = date_object.strftime(output_format)
+        #
+        #         return new_date_str
+        #
+        #     except ValueError as e:
+        #         logger.info(f"Error converting date '{date_string}': {e}")
+        #         return date_string
+        #
+        # check_in_date_label = convert_date_format(self.check_in_date)
+        # check_out_date_label = convert_date_format(self.check_out_date)
+        #
+        # check_in_month_year = convert_date_format(self.check_in_date, output_format="%B %Y")
+        # check_out_month_year = convert_date_format(self.check_out_date, output_format="%B %Y")
+        #
+        # select_check_in_check_out(
+        #     check_in_date_label,
+        #     check_out_date_label,
+        #     check_in_month_year,
+        #     check_out_month_year
+        # )
+        #
+        # logger.info("Date selection complete.")
+        #
+        # self.sb.sleep(random.uniform(0.9, 1.4))
+        #
+        # if not self._safe_click("//label[@for='usepoints-checkbox']", "usepoints-checkbox"):
+        #     return False
+        # self.sb.sleep(random.uniform(2.1, 3.3))
+        #
+        # if not self._safe_click("button.update-search-btn", "find hotel button"):
+        #     return False
+        #
+        # self.sb.sleep(random.uniform(2.9, 4.8))
+        #
+        # self.sb.save_screenshot("list_page.png")
+        #
+        # PROPERTY_CARD_SELECTOR = 'div.property-card[data-marsha]'
+        #
+        # try:
+        #     self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
+        # except Exception as first_error:
+        #     logger.info(f"Reloading listPage")
+        #     self.sb.reload_page()
+        #
+        #     try:
+        #         self.sb.wait_for_element_visible(PROPERTY_CARD_SELECTOR, timeout=120)
+        #     except Exception as e:
+        #         logger.error(f"Timed out waiting for list page to render after reload. Error: {e}")
+        #         return False
+        #
+        # cards = self.sb.find_elements(PROPERTY_CARD_SELECTOR)
+        #
+        # matched_card = None
+        # available_codes = []
+        #
+        # for card in cards:
+        #     code = card.get_attribute("data-marsha")
+        #     if code:
+        #         code_lower = code.lower()
+        #         available_codes.append(code_lower)
+        #
+        #         if code_lower == self.hotel_id.lower():
+        #             matched_card = card
+        #
+        # self.marsha_code = available_codes
+        #
+        # if not matched_card:
+        #     logger.info(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
+        #     message = {
+        #         "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
+        #     }
+        #     return self.build_response(success=False, data=message, status_code=422)
+        # else:
+        #     logger.info(f"Input hotel {self.hotel_id.lower()} available in listed hotel: {self.marsha_code}")
+        #     view_rates_xpath = f'//div[@data-marsha="{self.hotel_id.upper()}"]//a[contains(@class,"view-rates-button-container")]/button'
+        #     try:
+        #         self.sb.wait_for_element_visible(view_rates_xpath, timeout=120)
+        #     except Exception as e:
+        #         logger.error(f"Timed out waiting for view rates. Error: {e}")
+        #         return False
+        #
+        #     if not self._safe_click(view_rates_xpath, "view_rates button"):
+        #         return False
+        #
+        #     self.sb.sleep(random.uniform(2.5, 4.9))
+        #
+        #     ROOMS_LIST_CONTAINER = 'div[data-testid="RateCardV2"], div.rate-card-container'
+        #
+        #     self.sb.save_screenshot("room_page.png")
+        #
+        #     try:
+        #         self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
+        #     except Exception as first_error:
+        #         logger.info(f"Reloading roomPage")
+        #         self.sb.reload_page()
+        #
+        #         try:
+        #             self.sb.wait_for_element_visible(ROOMS_LIST_CONTAINER, timeout=120)
+        #         except Exception as e:
+        #             logger.error(f"Timed out waiting for room rates to render after reload. Error: {e}")
+        #             return False
+        #
+        #     logger.info("Clicked 'View Rates' successfully!")
+        #     self.sb.sleep(random.uniform(2.1, 3.3))
+        #
+        #     def slow_scroll(sb, step=600, pause=0.3, max_attempts=900):
+        #         """
+        #         Improved scroll that goes near the true bottom before stopping.
+        #         It waits for multiple scroll height checks to confirm no new content
+        #         is loading before stopping.
+        #         """
+        #
+        #         unchanged_height_count = 0
+        #         last_height = sb.execute_script("return document.body.scrollHeight")
+        #
+        #         for _ in range(max_attempts):
+        #             sb.execute_script(f"window.scrollBy(0, {step});")
+        #             time.sleep(pause)
+        #
+        #             new_height = sb.execute_script("return document.body.scrollHeight")
+        #
+        #             if new_height == last_height:
+        #                 unchanged_height_count += 1
+        #             else:
+        #                 unchanged_height_count = 0  # reset because page grew
+        #
+        #             if unchanged_height_count >= 5:
+        #                 break
+        #
+        #             last_height = new_height
+        #
+        #     slow_scroll(self.sb)
+        #
+        #     logger.info("Slow scroll finished. Element is now in view.")
+        #     # html = self.sb.get_page_source()
+        #     # with open("quickbook_debug.html", "w", encoding="utf-8") as f:
+        #     #     f.write(html)
+        #
+        #     return True
+
+    # def _extract_html_and_parse(self):
+    #     """Extracts the entire room list HTML and calls the parser."""
+    #
+    #     try:
+    #         logger.info("Scrolling entire page to load room cards...")
+    #
+    #         html = self.sb.get_attribute("body", "outerHTML")
+    #         logger.info(f"Extracted HTML length: {len(html)}")
+    #         page_version = None
+    #         if 'rate-card-container' in html:
+    #             page_version = "new"
+    #         elif 'RateCardV2' in html:
+    #             page_version = "old"
+    #         else:
+    #             logger.error("No valid room layout detected!")
+    #
+    #         if page_version == "new":
+    #             self.structured_room_data = self._parse_room_cards_new_html(html)
+    #
+    #         if page_version == "old":
+    #             self.structured_room_data = self._parse_room_cards_html(html)
+    #
+    #         logger.info(f"Parsed {len(self.structured_room_data)} rooms.")
+    #
+    #     except Exception as e:
+    #         logger.error(f"Critical HTML extraction error: {e}")
+    #         self.structured_room_data = []
 
 
     def get_search_data(self, hotel_id, check_in_date, check_out_date, guest_count=1):
@@ -824,16 +834,20 @@ class ExtractMarriott:
                     }
                     return self.build_response(success=False, data=message, status_code=408)
 
-                if isinstance(navigation, dict) and not navigation.get("success", True):
-                    logger.error(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
-                    message = {
-                        "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
-                    }
-                    return self.build_response(success=True, data=message, status_code=200)
+                # if isinstance(navigation, dict) and not navigation.get("success", True):
+                #     logger.error(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
+                #     message = {
+                #         "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
+                #     }
+                #     return self.build_response(success=True, data=message, status_code=200)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
-                self._extract_html_and_parse()
-                self.sb.sleep(random.uniform(0.5, 2.3))
+                message = {
+                        "details": "Home page found successfully.",
+                    }
+                return self.build_response(success=True, data=message, status_code=200)
+                # self._extract_html_and_parse()
+                # self.sb.sleep(random.uniform(0.5, 2.3))
 
         except Exception as e:
             logger.critical(f"A fatal error occurred during the scraping process: {e}")
@@ -842,15 +856,15 @@ class ExtractMarriott:
             }
             return self.build_response(success=False, data=message, status_code=500)
 
-        if self.structured_room_data:
-            logger.info("Data extraction successful. Returning 200.")
-            return self.build_response(success=True, data=self.structured_room_data, status_code=200)
-        else:
-            logger.warning("Scraping completed, but no room data was extracted.")
-            message = {
-                "details": "Search successful, but no room data found for the criteria.",
-            }
-            return self.build_response(success=True, data=message, status_code=200)
+        # if self.structured_room_data:
+        #     logger.info("Data extraction successful. Returning 200.")
+        #     return self.build_response(success=True, data=self.structured_room_data, status_code=200)
+        # else:
+        #     logger.warning("Scraping completed, but no room data was extracted.")
+        #     message = {
+        #         "details": "Search successful, but no room data found for the criteria.",
+        #     }
+        #     return self.build_response(success=True, data=message, status_code=200)
 
 
 if __name__ == '__main__':

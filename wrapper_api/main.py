@@ -9,7 +9,7 @@ import logging.config
 
 from ip_whitelist import ip_whitelist
 from log import LOGGING
-
+from auth import api_key_authentication
 from celery_config import celery_app
 from task import process_live_request
 from cache_processor import CrawlerRedisClient
@@ -46,12 +46,12 @@ async def load_hotel_map():
     with open("hotel_hyatt_mappings.csv", mode="r", encoding="utf-8") as hyatt_mapping:
         hyatt_reader = csv.DictReader(hyatt_mapping)
         for row in hyatt_reader:
-            h_id = str(row['hotel_id']).lower()
+            h_id = str(row['hotel_site_id']).lower()
             HOTEL_MAP[h_id] = row['combined']
     with open("hotels_marriott_mappings.csv", mode="r", encoding="utf-8") as marriott_mapping:
         marriott_reader = csv.DictReader(marriott_mapping)
         for row in marriott_reader:
-            h_id = str(row['hotel_id']).lower()
+            h_id = str(row['hotel_site_id']).lower()
             HOTEL_MAP[h_id] = row['combined']
     print("HOTEL Mapping Done....................######################################## ")
 
@@ -91,38 +91,49 @@ class ExceptionMiddleware(BaseHTTPMiddleware):
 app.add_middleware(ExceptionMiddleware)
 
 
-@app.post("/sendRequest/", dependencies=[Depends(ip_whitelist), Depends(limiter)])
+@app.post("/sendRequest/", dependencies=[Depends(api_key_authentication), Depends(limiter)])
 async def hotel_wrapper(request_body: HotelRequest):
     try:
         original_hotel_id = str(request_body.parameter.get("hotel_id")).lower()
-        combined_hotel_id = HOTEL_MAP.get(original_hotel_id)
+        site_name = str(request_body.site_name).lower()
+        lookup_name = f"{site_name}-{original_hotel_id}"
+
+        combined_hotel_id = HOTEL_MAP.get(lookup_name)
         logger.info("Hotel combined %s", combined_hotel_id)
         if not combined_hotel_id:
             raise HTTPException(status_code=404, detail="Hotel not found")
 
+        # override hotel ID with mapped ID
         request_body.parameter["hotel_id"] = combined_hotel_id
 
-        # Submit Celery task instead of Django HTTP call
         celery_payload = request_body.dict()
-        print(celery_payload)
         domain_name = CRAWLER_DOMAIN_MAP.get(request_body.site_name)
-        print("domain_name %s", domain_name)
         if not domain_name:
             raise HTTPException(status_code=400, detail=f"Domain not found for site {request_body.site_name}")
-        # Insert the mapped domain name into the request parameter
-        # request_body.parameter["domain_name"] = domain_name
-
-        task_result = send_live_request_to_queue(celery_payload, domain_name)
-
-        print(task_result)
 
         crawler_name = request_body.site_name
         parameter = request_body.parameter
-        # domain_name = parameter.get('domain_name')
+
+        # STEP 1: Build cache key
         cache_key = redis_client.build_key(crawler_name, parameter)
 
-        # Poll Redis cache as before
-        max_wait = 300
+        # STEP 2: Check Redis BEFORE sending to MQ
+        cache_resp = redis_client.get_crawler_response(cache_key)
+        if cache_resp:
+            logger.info(f"Cache HIT for {cache_key}. Returning cached response.")
+            combined = {
+                "request_params": request_body.dict(),
+                "crawler_response": cache_resp,
+                "message": "response form cache"
+            }
+            return JSONResponse(content=combined, status_code=cache_resp.get('status_code', 105))
+
+        # STEP 3: Cache MISS → send MQ task
+        logger.info(f"Cache MISS for {cache_key}. Sending task to MQ.")
+        task_result = send_live_request_to_queue(celery_payload, domain_name)
+
+        # STEP 4: Poll Redis for the response
+        max_wait = 420
         interval = 2
         waited = 0
 
@@ -144,3 +155,4 @@ async def hotel_wrapper(request_body: HotelRequest):
     except Exception as e:
         logger.error(f"Unhandled error: {e}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+

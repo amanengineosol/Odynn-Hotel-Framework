@@ -70,13 +70,13 @@ def process_live_request(request_data):
             response_obj.update({
                 'data': response.get('data'),
                 'success': response.get('success', True),
-                'Error': None,
+                'Error': response.get('Error','None'),
                 'status_code': 200
             })
-            save_request_response_to_db(request_data, response_obj)
-            logger.info(f"Response saved to DB for request: {request_data.get('request_id')}")
             redis_client.set_crawler_response(key, response_obj, expiration=10800)
             logger.info(f"Response cached in Redis for key: {key}")
+            save_request_response_to_db(request_data, response_obj)
+            logger.info(f"Response saved to DB for request: {request_data.get('request_id')}")
             return
 
         # Non-200 or unexpected response
@@ -88,8 +88,8 @@ def process_live_request(request_data):
             'status_code': (response.get('status_code') if isinstance(response, dict) else 400)
         })
         logger.info(f"Saving error response and caching for request: {request_data.get('request_id')}")
+        redis_client.set_crawler_response(key, response_obj, expiration=10)
         save_request_response_to_db(request_data, response_obj)
-        redis_client.set_crawler_response(key, response_obj, expiration=4)
         return
 
     except Exception as e:
@@ -100,6 +100,6 @@ def process_live_request(request_data):
             'Error': f"Error while calling get_search_data: {str(e)}",
             'status_code': 500
         })
+        redis_client.set_crawler_response(key, response_obj, expiration=10)
         save_request_response_to_db(request_data, response_obj)
-        redis_client.set_crawler_response(key, response_obj, expiration=4)
         return
