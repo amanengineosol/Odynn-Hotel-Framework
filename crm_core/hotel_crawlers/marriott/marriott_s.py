@@ -32,6 +32,32 @@ except ValueError:
 #
 # mycdp.util.parse_json_event = patched_parse_event
 
+import mycdp.util
+
+loggger = logging.getLogger("cdp")
+
+_event_parsers = mycdp.util._event_parsers
+
+def patched_parse_event(data):
+    method = data.get("method")
+    params = data.get("params", {})
+
+    parser = _event_parsers.get(method)
+
+    if parser is None:
+        loggger.debug(f"[CDP] Unknown event ignored: {method}")
+        return None
+
+    try:
+        return parser.from_json(params)
+    except Exception as e:
+        loggger.error(f"[CDP] Failed to parse event {method}: {e}")
+        return None
+
+# monkey-patch
+mycdp.util.parse_json_event = patched_parse_event
+
+
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('MarriottScraper')
@@ -56,12 +82,16 @@ Linux_USER_AGENT_POOL = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/142.0.7444.163 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 OPR/125.0.0.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.7390.125 Safari/537.36 OPR/125.0.5705.65"
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.7444.59 Safari/537.36",
     # "Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Linux; Ubuntu 24.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    # "Mozilla/5.0 (Linux; Ubuntu 24.04) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3485.94 Safari/537.36 Edg/140.0.3485.94",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.4334.67 Safari/537.36 Edg/140.0.4334.67",
     # "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.3022.21 Safari/537.36 Edg/140.0.3022.21",
@@ -799,7 +829,7 @@ class ExtractMarriott:
                     message = {
                         "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
                     }
-                    return self.build_response(success=False, data=message, status_code=422)
+                    return self.build_response(success=True, data=message, status_code=200)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
@@ -820,7 +850,7 @@ class ExtractMarriott:
             message = {
                 "details": "Search successful, but no room data found for the criteria.",
             }
-            return self.build_response(success=False, data=message, status_code=204)
+            return self.build_response(success=True, data=message, status_code=200)
 
 
 if __name__ == '__main__':
