@@ -742,7 +742,7 @@ class ExtractMarriott:
             logger.info(f"Parsed {len(self.structured_room_data)} rooms.")
 
         except Exception as e:
-            logger.error(f"Critical HTML extraction error: {e}")
+            logger.error(f"Critical HTML extraction error reported: {e}")
             self.structured_room_data = []
 
 
