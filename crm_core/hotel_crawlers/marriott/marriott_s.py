@@ -779,8 +779,8 @@ class ExtractMarriott:
         else:
             host = "pvt"
         logger.info(f"Using Proxy: {host}:{parsed.port}")
-        # self.user_agent_pool = Linux_USER_AGENT_POOL
-        self.user_agent_pool = Widnows_USER_AGENT_POOL
+        self.user_agent_pool = Linux_USER_AGENT_POOL
+        # self.user_agent_pool = Widnows_USER_AGENT_POOL
         self.selected_user_agent = random.choice(self.user_agent_pool)
         logger.info(f"Using User-Agent: {self.selected_user_agent}")
         message = {
