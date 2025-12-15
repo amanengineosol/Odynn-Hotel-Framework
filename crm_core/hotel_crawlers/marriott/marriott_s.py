@@ -35,6 +35,7 @@ except ValueError:
 import mycdp.util
 
 loggger = logging.getLogger("cdp")
+loggger.setLevel(logging.ERROR)
 
 _event_parsers = mycdp.util._event_parsers
 
@@ -61,7 +62,7 @@ mycdp.util.parse_json_event = patched_parse_event
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('MarriottScraper')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 
 # Create console handler and set level to debug
