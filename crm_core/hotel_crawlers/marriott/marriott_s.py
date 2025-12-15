@@ -62,7 +62,7 @@ mycdp.util.parse_json_event = patched_parse_event
 # --- SETUP LOGGING ---
 # Configure the logger for the module
 logger = logging.getLogger('MarriottScraper')
-logger.setLevel(logging.ERROR)
+logger.setLevel(logging.INFO)
 logger.propagate = False
 
 # Create console handler and set level to debug
