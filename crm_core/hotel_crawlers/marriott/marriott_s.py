@@ -66,7 +66,7 @@ logger.propagate = False
 
 # Create console handler and set level to debug
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 
 # Create formatter and add it to the handler
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
