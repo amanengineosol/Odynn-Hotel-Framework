@@ -61,4 +61,4 @@ COPY ../crm_core /app
 ENV DJANGO_SETTINGS_MODULE=crm_core.settings.development
 
 # Celery worker startup
-CMD ["celery", "-A", "crm_core", "worker", "-n", "marriott_worker", "-Q", "Marriott", "--loglevel=INFO", "--concurrency=4"]
+CMD ["celery", "-A", "crm_core", "worker", "-n", "marriott_worker", "-Q", "Marriott", "--loglevel=INFO"]

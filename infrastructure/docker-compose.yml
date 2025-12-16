@@ -38,27 +38,27 @@ services:
       retries: 5
       start_period: 10s
 
-  postgres:
-    build:
-      context: .
-      dockerfile: Dockerfiles.postgres
-    container_name: postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: odynn
-      POSTGRES_PASSWORD: Pass123
-      POSTGRES_DB: odynn_platform
-      TZ: Asia/Kolkata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+#  postgres:
+#    build:
+#      context: .
+#      dockerfile: Dockerfiles.postgres
+#    container_name: postgres
+#    ports:
+#      - "5432:5432"
+#    environment:
+#      POSTGRES_USER: odynn
+#      POSTGRES_PASSWORD: Pass123
+#      POSTGRES_DB: odynn_platform
+#      TZ: Asia/Kolkata
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    restart: unless-stopped
+#    healthcheck:
+#      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 10s
 
   mongodb:
     build:
@@ -80,21 +80,21 @@ services:
       retries: 5
       start_period: 10s
 
-  crm-core:
-    build:
-      context: ..
-      dockerfile: crm_core/Dockerfile.crm_core
-    container_name: crm-core
-    ports:
-      - "8000:8000"
-    depends_on:
-      - rabbitmq
-      - redis
-      - postgres
-      - mongodb
-    environment:
-      DJANGO_SETTINGS_MODULE: crm_core.settings.development
-    restart: unless-stopped
+#  crm-core:
+#    build:
+#      context: ..
+#      dockerfile: crm_core/Dockerfile.crm_core
+#    container_name: crm-core
+#    ports:
+#      - "8000:8000"
+#    depends_on:
+#      - rabbitmq
+#      - redis
+#      - postgres
+#      - mongodb
+#    environment:
+#      DJANGO_SETTINGS_MODULE: crm_core.settings.development
+#    restart: unless-stopped
 
 #  hyatt-cookies-service:
 #    build:
@@ -113,8 +113,10 @@ services:
       dockerfile: crm_core/Dockerfile.marriott_consumer
     container_name: marriott_consumer
     depends_on:
-      - rabbitmq
-      - redis
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       DJANGO_SETTINGS_MODULE: crm_core.settings.development
     restart: unless-stopped
@@ -126,8 +128,10 @@ services:
       dockerfile: crm_core/Dockerfile.hyatt_consumer
     container_name: hyatt_consumer
     depends_on:
-      - rabbitmq
-      - redis
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
     environment:
       DJANGO_SETTINGS_MODULE: crm_core.settings.development
     restart: unless-stopped
@@ -149,12 +153,12 @@ services:
     ports:
       - "9000:9000"
 
-  ua-cookie-manager:
-    build:
-      context: ..
-      dockerfile: ua-cookie-manager/Dockerfiles.uacookiemanager
-    ports:
-      - "9001:9001"
+#  ua-cookie-manager:
+#    build:
+#      context: ..
+#      dockerfile: ua-cookie-manager/Dockerfiles.uacookiemanager
+#    ports:
+#      - "9001:9001"
 
 volumes:
   rabbitmq_data:

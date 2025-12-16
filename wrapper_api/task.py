@@ -1,16 +1,24 @@
+from sys import exc_info
+
 from celery import shared_task
 from crawler_dispatcher import CRAWLER_FETCH_RESPONSE_MAP
 from cache_processor import CrawlerRedisClient
 from mongo_db_service import save_request_response_to_db
-from response_body import response_obj
+# from response_body import response_obj
 
 import logging
 logger = logging.getLogger(__name__)
 
 redis_client= CrawlerRedisClient(0)
 
-@shared_task(name='crm_core.task.process_live_request', rate_limit="40/m")
+@shared_task(name='crm_core.task.process_live_request', rate_limit="40/m", ignore_result=True)
 def process_live_request(request_data):
+    response_obj = {
+        "data": None,
+        "success": False,
+        "Error": None,
+        "status_code": None,
+    }
     logger.info(f"Processing request: {request_data.get('request_id')}")
     crawler_name = request_data['site_name']
     parameter = request_data['parameter']
@@ -44,8 +52,11 @@ def process_live_request(request_data):
                 })
                 save_request_response_to_db(request_data, response_obj)
                 logger.info(f"Response saved to DB for request: {request_data.get('request_id')}")
-                redis_client.set_crawler_response(key, response_obj, expiration=10800)
-                logger.info(f"Response cached in Redis for key: {key}")
+                try:
+                    redis_client.set_crawler_response(key, response_obj, expiration=10800)
+                    logger.info(f"Response cached in Redis for key: {key}")
+                except Exception as e:
+                    logger.error(f"Redis cache unavailable", exc_info=True)
                 return
             logger.warning(f"Non-200 crawler response for {crawler_name}")
             response_obj.update({
@@ -56,7 +67,11 @@ def process_live_request(request_data):
             })
             logger.info(f"Saving error response and caching for request: {request_data.get('request_id')}")
             save_request_response_to_db(request_data, response_obj)
-            redis_client.set_crawler_response(key, response_obj, expiration=4)
+            try:
+                redis_client.set_crawler_response(key, response_obj, expiration=4)
+                logger.info(f"Response cached in Redis for key: {key}")
+            except Exception as e:
+                logger.error(f"Redis cache unavailable", exc_info=True)
             return
 
         except Exception as e:
@@ -68,4 +83,8 @@ def process_live_request(request_data):
                     'status_code': 500
                 })
             save_request_response_to_db(request_data, response_obj)
-            redis_client.set_crawler_response(key, response_obj, expiration=4)
+            try:
+                redis_client.set_crawler_response(key, response_obj, expiration=4)
+                logger.info(f"Response cached in Redis for key: {key}")
+            except Exception as e:
+                logger.error(f"Redis cache unavailable", exc_info=True)

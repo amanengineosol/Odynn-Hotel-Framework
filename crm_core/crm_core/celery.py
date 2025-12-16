@@ -52,6 +52,13 @@ from kombu import Exchange, Queue
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crm_core.settings.development')
 app = Celery('crm_core')
 app.config_from_object('django.conf:settings', namespace='CELERY')
+
+# 🔒 FORCE-disable result backend at runtime
+app.conf.update(
+    result_backend=None,
+    task_ignore_result=True,
+)
+
 app.autodiscover_tasks()
 
 
