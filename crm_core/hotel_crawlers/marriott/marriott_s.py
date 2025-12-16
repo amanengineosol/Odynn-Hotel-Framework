@@ -503,8 +503,7 @@ class ExtractMarriott:
 
                 logger.info(f"Visible month caption: {visible}")
 
-                if target in visible:
-                # if first == target:
+                if first == target:
                     logger.info(f"First visible month matched target: {first}")
                     self.sb.sleep(random.uniform(0.5, 0.8))
                     self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
