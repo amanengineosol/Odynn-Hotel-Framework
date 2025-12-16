@@ -649,15 +649,18 @@ class ExtractMarriott:
             message = {
                 "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
             }
-            return self.build_response(success=False, data=message, status_code=422)
+            return self.build_response(success=False, data=message, status_code=421)
         else:
             logger.info(f"Input hotel {self.hotel_id.lower()} available in listed hotel: {self.marsha_code}")
             view_rates_xpath = f'//div[@data-marsha="{self.hotel_id.upper()}"]//a[contains(@class,"view-rates-button-container")]/button'
             try:
-                self.sb.wait_for_element_visible(view_rates_xpath, timeout=120)
+                self.sb.wait_for_element_visible(view_rates_xpath, timeout=20)
             except Exception as e:
-                logger.error(f"Timed out waiting for view rates. Error: {e}")
-                return False
+                logger.info(f"Input hotel {self.hotel_id.lower()} not available at selected parameters.")
+                message = {
+                    "details": f"Input hotel {self.hotel_id.lower()} not available at selected parameters."
+                }
+                return self.build_response(success=False, data=message, status_code=422)
 
             if not self._safe_click(view_rates_xpath, "view_rates button"):
                 return False
@@ -826,11 +829,18 @@ class ExtractMarriott:
                     return self.build_response(success=False, data=message, status_code=408)
 
                 if isinstance(navigation, dict) and not navigation.get("success", True):
-                    logger.error(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
-                    message = {
-                        "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
-                    }
-                    return self.build_response(success=True, data=message, status_code=200)
+                    if navigation.get("status_code", 422):
+                        logger.error(f"Input hotel {self.hotel_id.lower()} not available at selected parameters.")
+                        message = {
+                            "details": f"Input hotel {self.hotel_id.lower()} not available at selected parameters."
+                        }
+                        return self.build_response(success=True, data=message, status_code=200)
+                    else:
+                        logger.error(f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}")
+                        message = {
+                            "details": f"Input hotel {self.hotel_id.lower()} not available in listed hotel: {self.marsha_code}",
+                        }
+                        return self.build_response(success=True, data=message, status_code=200)
 
                 logger.info("Navigation successful. Proceeding to extract HTML...")
                 self._extract_html_and_parse()
@@ -857,6 +867,6 @@ class ExtractMarriott:
 if __name__ == '__main__':
     scraper = ExtractMarriott()
 
-    data = scraper.get_search_data(hotel_id="laxbp-courtyard-los-angeles-baldwin-park", check_in_date="2026-01-26",
-                                   check_out_date="2026-01-28" , guest_count=1)
+    data = scraper.get_search_data(hotel_id="oxrah-towneplace-suites-thousand-oaks-agoura-hills", check_in_date="2025-12-24",
+                                   check_out_date="2025-12-26" , guest_count=1)
     print(json.dumps(data, indent=4))
