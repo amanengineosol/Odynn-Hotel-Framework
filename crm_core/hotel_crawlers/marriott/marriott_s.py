@@ -490,7 +490,7 @@ class ExtractMarriott:
             target = target_month_year.strip().lower()
             logger.info(f"Go to month: {target_month_year}")
 
-            for _ in range(18):
+            for attempt in range(12):
                 caps = self.sb.find_elements("//div[@class='DayPicker-Caption']/div")
                 caps = [c for c in caps if c.text.strip()]
 
@@ -505,6 +505,12 @@ class ExtractMarriott:
 
                 if first == target:
                     logger.info(f"First visible month matched target: {first}")
+                    self.sb.sleep(random.uniform(0.5, 0.8))
+                    self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
+                    return
+
+                if attempt == 11 and target in visible:
+                    logger.info(f"Target month available in visible months: {visible}")
                     self.sb.sleep(random.uniform(0.5, 0.8))
                     self.sb.wait_for_element_visible("//div[contains(@class,'DayPicker-Body')]", timeout=10)
                     return
